@@ -1,0 +1,140 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1\Admin;
+
+use App\Http\Controllers\ApiResponseTrait;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\RejectUserRequest;
+use App\Http\Resources\UserResource;
+use App\Models\User;
+use App\Services\AuthService;
+use App\Services\UserService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Password;
+
+class UserController extends Controller
+{
+    use ApiResponseTrait;
+
+    public function __construct(
+        protected UserService $userService,
+        protected AuthService $authService
+    ) {}
+
+    /**
+     * List users with filters and pagination.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $query = User::with(['roles', 'primaryUnit.unit.block.property']);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->filled('role')) {
+            $query->role($request->input('role'));
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        $users = $query->orderByDesc('created_at')
+            ->paginate($request->integer('per_page', 15));
+
+        return $this->success(UserResource::collection($users)->response()->getData(true));
+    }
+
+    /**
+     * Show a specific user.
+     */
+    public function show(User $user): JsonResponse
+    {
+        $user->load(['roles', 'primaryUnit.unit.block.property', 'approvals.performer']);
+
+        return $this->success(new UserResource($user));
+    }
+
+    /**
+     * Update a user.
+     */
+    public function update(Request $request, User $user): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => ['sometimes', 'string', 'max:255'],
+            'phone' => ['sometimes', 'string', 'max:50'],
+            'resident_type' => ['sometimes', 'in:owner,tenant'],
+        ]);
+
+        $user->update($validated);
+        $user->load(['roles', 'primaryUnit.unit.block.property']);
+
+        return $this->success(new UserResource($user), 'User updated successfully.');
+    }
+
+    /**
+     * Approve a pending user.
+     */
+    public function approve(User $user): JsonResponse
+    {
+        $user = $this->userService->approveUser($user, auth()->user());
+        $user->load(['roles', 'primaryUnit.unit.block.property']);
+
+        return $this->success(new UserResource($user), 'User approved successfully.');
+    }
+
+    /**
+     * Reject a pending user.
+     */
+    public function reject(RejectUserRequest $request, User $user): JsonResponse
+    {
+        $user = $this->userService->rejectUser($user, auth()->user(), $request->validated('reason'));
+        $user->load(['roles', 'primaryUnit.unit.block.property']);
+
+        return $this->success(new UserResource($user), 'User rejected.');
+    }
+
+    /**
+     * Suspend an approved user.
+     */
+    public function suspend(Request $request, User $user): JsonResponse
+    {
+        $reason = $request->input('reason');
+        $user = $this->userService->suspendUser($user, auth()->user(), $reason);
+        $user->load(['roles', 'primaryUnit.unit.block.property']);
+
+        return $this->success(new UserResource($user), 'User suspended.');
+    }
+
+    /**
+     * Reactivate a suspended user.
+     */
+    public function reactivate(User $user): JsonResponse
+    {
+        $user = $this->userService->reactivateUser($user, auth()->user());
+        $user->load(['roles', 'primaryUnit.unit.block.property']);
+
+        return $this->success(new UserResource($user), 'User reactivated.');
+    }
+
+    /**
+     * Send a password reset link to the user.
+     */
+    public function resetPassword(User $user): JsonResponse
+    {
+        $status = Password::sendResetLink(['email' => $user->email]);
+
+        if ($status === Password::RESET_LINK_SENT) {
+            return $this->success(message: 'Password reset link sent to user.');
+        }
+
+        return $this->error('Failed to send reset link.');
+    }
+}

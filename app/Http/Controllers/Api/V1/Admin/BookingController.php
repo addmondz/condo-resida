@@ -1,0 +1,168 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1\Admin;
+
+use App\Http\Controllers\ApiResponseTrait;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\RejectBookingRequest;
+use App\Http\Resources\FacilityBookingResource;
+use App\Models\FacilityBooking;
+use App\Services\FacilityService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
+class BookingController extends Controller
+{
+    use ApiResponseTrait;
+
+    public function __construct(
+        protected FacilityService $facilityService
+    ) {}
+
+    /**
+     * List all bookings with filters and pagination.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $query = FacilityBooking::with(['facility.property', 'resident', 'approvedBy']);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->filled('facility_id')) {
+            $query->where('facility_id', $request->input('facility_id'));
+        }
+
+        if ($request->filled('date')) {
+            $query->whereDate('booking_date', $request->input('date'));
+        }
+
+        if ($request->filled('from_date')) {
+            $query->whereDate('booking_date', '>=', $request->input('from_date'));
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('booking_date', '<=', $request->input('to_date'));
+        }
+
+        $bookings = $query->orderByDesc('booking_date')
+            ->orderByDesc('created_at')
+            ->paginate($request->integer('per_page', 15));
+
+        return $this->success(FacilityBookingResource::collection($bookings)->response()->getData(true));
+    }
+
+    /**
+     * Show a specific booking.
+     */
+    public function show(FacilityBooking $booking): JsonResponse
+    {
+        $booking->load(['facility.property', 'resident', 'approvedBy', 'cancelledBy']);
+
+        return $this->success(new FacilityBookingResource($booking));
+    }
+
+    /**
+     * Approve a booking.
+     */
+    public function approve(FacilityBooking $booking): JsonResponse
+    {
+        $booking = $this->facilityService->approveBooking($booking, auth()->user());
+
+        return $this->success(
+            new FacilityBookingResource($booking),
+            'Booking approved successfully.'
+        );
+    }
+
+    /**
+     * Reject a booking.
+     */
+    public function reject(RejectBookingRequest $request, FacilityBooking $booking): JsonResponse
+    {
+        $booking = $this->facilityService->rejectBooking(
+            $booking,
+            auth()->user(),
+            $request->validated('reason')
+        );
+
+        return $this->success(
+            new FacilityBookingResource($booking),
+            'Booking rejected.'
+        );
+    }
+
+    /**
+     * Cancel a booking.
+     */
+    public function cancel(FacilityBooking $booking): JsonResponse
+    {
+        $booking = $this->facilityService->cancelBooking($booking, auth()->user());
+
+        return $this->success(
+            new FacilityBookingResource($booking),
+            'Booking cancelled.'
+        );
+    }
+
+    /**
+     * Export bookings as CSV.
+     */
+    public function export(Request $request): StreamedResponse
+    {
+        $query = FacilityBooking::with(['facility', 'resident']);
+
+        if ($request->filled('from_date')) {
+            $query->whereDate('booking_date', '>=', $request->input('from_date'));
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('booking_date', '<=', $request->input('to_date'));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        $bookings = $query->orderByDesc('booking_date')->get();
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="bookings_' . now()->format('Y-m-d') . '.csv"',
+        ];
+
+        return response()->stream(function () use ($bookings) {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, [
+                'Facility',
+                'Resident',
+                'Booking Date',
+                'Start Time',
+                'End Time',
+                'Status',
+                'Rejection Reason',
+                'Notes',
+                'Created At',
+            ]);
+
+            foreach ($bookings as $booking) {
+                fputcsv($handle, [
+                    $booking->facility?->name,
+                    $booking->resident?->name,
+                    $booking->booking_date?->format('Y-m-d'),
+                    $booking->start_time,
+                    $booking->end_time,
+                    $booking->status?->label(),
+                    $booking->rejection_reason,
+                    $booking->notes,
+                    $booking->created_at?->format('Y-m-d H:i:s'),
+                ]);
+            }
+
+            fclose($handle);
+        }, 200, $headers);
+    }
+}
