@@ -26,8 +26,14 @@ class QrController extends Controller
             'qr_token' => ['required', 'string'],
         ]);
 
-        $visitor = $this->visitorService->validateQrToken($request->input('qr_token'));
+        $result = $this->visitorService->scanQrToken($request->input('qr_token'), $request->user());
 
-        return $this->success(new VisitorRegistrationResource($visitor), 'QR code is valid.');
+        return $this->success([
+            'result' => $result['result'],
+            'message' => $result['message'],
+            'can_check_in' => $result['can_check_in'],
+            'can_check_out' => $result['can_check_out'],
+            'visitor' => $result['visitor'] ? new VisitorRegistrationResource($result['visitor']) : null,
+        ], $result['message']);
     }
 }

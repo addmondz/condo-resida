@@ -1,8 +1,8 @@
-import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
-import residentApi from '@/api/resident';
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
+import residentApi from "@/api/resident";
 
-export const useNotificationStore = defineStore('notification', () => {
+export const useNotificationStore = defineStore("notification", () => {
     const notifications = ref([]);
     const unreadCount = ref(0);
     const loading = ref(false);

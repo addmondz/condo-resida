@@ -25,8 +25,17 @@ class BookingController extends Controller
     public function index(Request $request): JsonResponse
     {
         $bookings = FacilityBooking::where('resident_id', auth()->id())
-            ->with(['facility.property', 'approvedBy'])
-            ->orderByDesc('booking_date')
+            ->with(['facility.property', 'approvedBy']);
+
+        if ($request->input('filter') === 'upcoming') {
+            $bookings->whereDate('booking_date', '>=', now()->toDateString());
+        }
+
+        if ($request->input('filter') === 'past') {
+            $bookings->whereDate('booking_date', '<', now()->toDateString());
+        }
+
+        $bookings = $bookings->orderByDesc('booking_date')
             ->paginate($request->integer('per_page', 15));
 
         return $this->success(FacilityBookingResource::collection($bookings)->response()->getData(true));
@@ -44,6 +53,18 @@ class BookingController extends Controller
             'Booking created successfully.',
             201
         );
+    }
+
+    /**
+     * Show a single booking.
+     */
+    public function show(FacilityBooking $booking): JsonResponse
+    {
+        $this->authorize('view', $booking);
+
+        $booking->load(['facility.property', 'approvedBy']);
+
+        return $this->success(new FacilityBookingResource($booking));
     }
 
     /**

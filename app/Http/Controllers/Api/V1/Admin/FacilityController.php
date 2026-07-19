@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreFacilityRequest;
 use App\Http\Resources\FacilityResource;
 use App\Models\Facility;
+use App\Models\FacilityBlockedSlot;
 use App\Models\Property;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -91,5 +92,66 @@ class FacilityController extends Controller
         $facility->load('property');
 
         return $this->success(new FacilityResource($facility), 'Facility updated successfully.');
+    }
+
+    /**
+     * List blocked dates and time slots for a facility.
+     */
+    public function blockedSlots(Facility $facility): JsonResponse
+    {
+        $slots = $facility->blockedSlots()
+            ->orderByDesc('blocked_date')
+            ->orderBy('start_time')
+            ->get()
+            ->map(fn (FacilityBlockedSlot $slot) => $this->blockedSlotPayload($slot));
+
+        return $this->success($slots);
+    }
+
+    /**
+     * Block a full date or a specific time slot for a facility.
+     */
+    public function storeBlockedSlot(Request $request, Facility $facility): JsonResponse
+    {
+        $validated = $request->validate([
+            'blocked_date' => ['required', 'date', 'after_or_equal:today'],
+            'start_time' => ['nullable', 'required_with:end_time', 'date_format:H:i'],
+            'end_time' => ['nullable', 'required_with:start_time', 'date_format:H:i', 'after:start_time'],
+            'reason' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $slot = $facility->blockedSlots()->create($validated);
+
+        return $this->success($this->blockedSlotPayload($slot), 'Facility slot blocked successfully.', 201);
+    }
+
+    /**
+     * Remove a blocked facility slot.
+     */
+    public function destroyBlockedSlot(Facility $facility, FacilityBlockedSlot $blockedSlot): JsonResponse
+    {
+        if ($blockedSlot->facility_id !== $facility->id) {
+            return $this->notFound('Blocked slot not found.');
+        }
+
+        $blockedSlot->delete();
+
+        return $this->success(message: 'Blocked slot removed successfully.');
+    }
+
+    /**
+     * Format a blocked slot response.
+     *
+     * @return array<string, mixed>
+     */
+    private function blockedSlotPayload(FacilityBlockedSlot $slot): array
+    {
+        return [
+            'id' => $slot->id,
+            'blocked_date' => $slot->blocked_date?->format('Y-m-d'),
+            'start_time' => $slot->start_time,
+            'end_time' => $slot->end_time,
+            'reason' => $slot->reason,
+        ];
     }
 }

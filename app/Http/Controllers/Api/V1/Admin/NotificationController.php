@@ -3,15 +3,19 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Enums\NotificationTargetType;
+use App\Enums\UserStatus;
 use App\Http\Controllers\ApiResponseTrait;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreNotificationRequest;
 use App\Http\Resources\AppNotificationResource;
 use App\Models\AppNotification;
+use App\Models\Block;
 use App\Models\NotificationRecipient;
+use App\Models\Property;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class NotificationController extends Controller
 {
@@ -39,69 +43,151 @@ class NotificationController extends Controller
     public function store(StoreNotificationRequest $request): JsonResponse
     {
         $data = $request->validated();
+        $target = $this->resolveTarget($data);
+        $status = $data['status'] ?? 'published';
 
-        $notification = AppNotification::create([
-            'title' => $data['title'],
-            'body' => $data['body'],
-            'type' => $data['type'],
-            'target_type' => $data['target_type'],
-            'target_id' => $data['target_id'] ?? null,
-            'property_id' => $data['property_id'] ?? null,
-            'status' => 'published',
-            'published_at' => now(),
-            'created_by' => auth()->id(),
-        ]);
+        $notification = DB::transaction(function () use ($data, $target, $status): AppNotification {
+            $notification = AppNotification::create([
+                'title' => $data['title'],
+                'body' => $data['body'],
+                'type' => $data['type'],
+                'target_type' => $data['target_type'],
+                'target_id' => $target['target_id'],
+                'property_id' => $target['property_id'],
+                'status' => $status,
+                'published_at' => $status === 'published' ? now() : null,
+                'created_by' => auth()->id(),
+            ]);
 
-        // Determine recipients based on target type
-        $targetType = NotificationTargetType::from($data['target_type']);
-        $recipientQuery = User::query();
+            if ($status === 'published') {
+                $this->dispatchNotification($notification, $data, $target);
+            }
 
-        switch ($targetType) {
-            case NotificationTargetType::All:
-                $recipientQuery->whereHas('roles', function ($q) {
-                    $q->where('name', 'resident');
-                });
-                break;
-
-            case NotificationTargetType::Property:
-                if (isset($data['target_id'])) {
-                    $recipientQuery->whereHas('unitAssignments', function ($q) use ($data) {
-                        $q->where('property_id', $data['target_id']);
-                    });
-                }
-                break;
-
-            case NotificationTargetType::Block:
-                if (isset($data['target_id'])) {
-                    $recipientQuery->whereHas('unitAssignments.unit', function ($q) use ($data) {
-                        $q->where('block_id', $data['target_id']);
-                    });
-                }
-                break;
-
-            case NotificationTargetType::Residents:
-                // target_id is ignored; all residents get it
-                $recipientQuery->whereHas('roles', function ($q) {
-                    $q->where('name', 'resident');
-                });
-                break;
-        }
-
-        $recipientIds = $recipientQuery->pluck('id');
-
-        $recipients = $recipientIds->map(fn ($userId) => [
-            'notification_id' => $notification->id,
-            'user_id' => $userId,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        NotificationRecipient::insert($recipients->toArray());
+            return $notification;
+        });
 
         return $this->success(
             new AppNotificationResource($notification),
-            'Notification created and dispatched.',
+            $status === 'published' ? 'Notification created and dispatched.' : 'Notification saved as draft.',
             201
         );
+    }
+
+    /**
+     * Publish a draft notification.
+     */
+    public function publish(AppNotification $notification): JsonResponse
+    {
+        if ($notification->status === 'archived') {
+            return $this->error('Archived notifications cannot be published.', 422);
+        }
+
+        $notification->update([
+            'status' => 'published',
+            'published_at' => now(),
+        ]);
+
+        $this->dispatchNotification($notification, [
+            'target_type' => $notification->target_type->value,
+        ], [
+            'target_id' => $notification->target_id,
+            'property_id' => $notification->property_id,
+            'resident_ids' => null,
+        ]);
+
+        return $this->success(new AppNotificationResource($notification->fresh()), 'Notification published.');
+    }
+
+    /**
+     * Archive a notification.
+     */
+    public function archive(AppNotification $notification): JsonResponse
+    {
+        $notification->update(['status' => 'archived']);
+
+        return $this->success(new AppNotificationResource($notification->fresh()), 'Notification archived.');
+    }
+
+    /**
+     * Resolve UUID based targeting into internal IDs.
+     *
+     * @return array{target_id: int|null, property_id: int|null, resident_ids: array<int>|null}
+     */
+    private function resolveTarget(array $data): array
+    {
+        $targetType = NotificationTargetType::from($data['target_type']);
+
+        return match ($targetType) {
+            NotificationTargetType::Property => $this->resolvePropertyTarget($data),
+            NotificationTargetType::Block => $this->resolveBlockTarget($data),
+            NotificationTargetType::SelectedResidents => [
+                'target_id' => null,
+                'property_id' => null,
+                'resident_ids' => User::whereIn('uuid', $data['resident_uuids'] ?? [])->pluck('id')->all(),
+            ],
+            default => [
+                'target_id' => null,
+                'property_id' => null,
+                'resident_ids' => null,
+            ],
+        };
+    }
+
+    /**
+     * @return array{target_id: int|null, property_id: int|null, resident_ids: null}
+     */
+    private function resolvePropertyTarget(array $data): array
+    {
+        $property = isset($data['property_uuid'])
+            ? Property::where('uuid', $data['property_uuid'])->first()
+            : Property::find($data['target_id'] ?? null);
+
+        return [
+            'target_id' => $property?->id,
+            'property_id' => $property?->id,
+            'resident_ids' => null,
+        ];
+    }
+
+    /**
+     * @return array{target_id: int|null, property_id: int|null, resident_ids: null}
+     */
+    private function resolveBlockTarget(array $data): array
+    {
+        $block = isset($data['block_uuid'])
+            ? Block::where('uuid', $data['block_uuid'])->first()
+            : Block::find($data['target_id'] ?? null);
+
+        return [
+            'target_id' => $block?->id,
+            'property_id' => $block?->property_id,
+            'resident_ids' => null,
+        ];
+    }
+
+    /**
+     * Dispatch notification recipients for a published notification.
+     */
+    private function dispatchNotification(AppNotification $notification, array $data, array $target): void
+    {
+        $recipientQuery = User::query()
+            ->where('status', UserStatus::Approved)
+            ->whereHas('roles', fn ($q) => $q->where('name', 'resident'));
+
+        $targetType = NotificationTargetType::from($data['target_type']);
+
+        match ($targetType) {
+            NotificationTargetType::Property => $recipientQuery->whereHas('unitAssignments', fn ($q) => $q->where('property_id', $target['target_id'])),
+            NotificationTargetType::Block => $recipientQuery->whereHas('unitAssignments.unit', fn ($q) => $q->where('block_id', $target['target_id'])),
+            NotificationTargetType::SelectedResidents => $recipientQuery->whereIn('id', $target['resident_ids'] ?? []),
+            default => null,
+        };
+
+        $recipientQuery->pluck('id')->each(function (int $userId) use ($notification): void {
+            NotificationRecipient::firstOrCreate([
+                'notification_id' => $notification->id,
+                'user_id' => $userId,
+            ]);
+        });
     }
 }

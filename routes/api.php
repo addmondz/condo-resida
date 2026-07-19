@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\Guard\DashboardController as GuardDashboardContr
 use App\Http\Controllers\Api\V1\Guard\QrController;
 use App\Http\Controllers\Api\V1\Guard\VisitorController as GuardVisitorController;
 use App\Http\Controllers\Api\V1\Resident\BookingController as ResidentBookingController;
+use App\Http\Controllers\Api\V1\Resident\DashboardController as ResidentDashboardController;
 use App\Http\Controllers\Api\V1\Resident\FacilityController as ResidentFacilityController;
 use App\Http\Controllers\Api\V1\Resident\NotificationController as ResidentNotificationController;
 use App\Http\Controllers\Api\V1\Resident\ProfileController;
@@ -45,12 +46,15 @@ Route::prefix('v1')->group(function () {
             Route::post('logout', [AuthController::class, 'logout']);
             Route::get('me', [AuthController::class, 'me']);
             Route::put('change-password', [AuthController::class, 'changePassword']);
+            Route::post('onboarding', [AuthController::class, 'onboarding']);
         });
 
         // ---------------------------------------------------------------
         // Resident
         // ---------------------------------------------------------------
-        Route::prefix('resident')->middleware('role:resident')->group(function () {
+        Route::prefix('resident')->middleware(['role:resident', 'resident.approved'])->group(function () {
+            Route::get('dashboard', [ResidentDashboardController::class, 'dashboard']);
+
             Route::get('profile', [ProfileController::class, 'show']);
             Route::put('profile', [ProfileController::class, 'update']);
 
@@ -65,6 +69,7 @@ Route::prefix('v1')->group(function () {
             Route::get('facilities/{facility}/availability', [ResidentFacilityController::class, 'availability']);
 
             Route::get('bookings', [ResidentBookingController::class, 'index']);
+            Route::get('bookings/{booking}', [ResidentBookingController::class, 'show']);
             Route::post('bookings', [ResidentBookingController::class, 'store']);
             Route::post('bookings/{booking}/cancel', [ResidentBookingController::class, 'cancel']);
 
@@ -113,6 +118,9 @@ Route::prefix('v1')->group(function () {
             Route::post('facilities', [AdminFacilityController::class, 'store']);
             Route::get('facilities/{facility}', [AdminFacilityController::class, 'show']);
             Route::post('facilities/{facility}', [AdminFacilityController::class, 'update']);
+            Route::get('facilities/{facility}/blocked-slots', [AdminFacilityController::class, 'blockedSlots']);
+            Route::post('facilities/{facility}/blocked-slots', [AdminFacilityController::class, 'storeBlockedSlot']);
+            Route::delete('facilities/{facility}/blocked-slots/{blockedSlot}', [AdminFacilityController::class, 'destroyBlockedSlot']);
 
             Route::get('bookings', [AdminBookingController::class, 'index']);
             Route::get('bookings/export', [AdminBookingController::class, 'export']);
@@ -123,6 +131,8 @@ Route::prefix('v1')->group(function () {
 
             Route::get('notifications', [AdminNotificationController::class, 'index']);
             Route::post('notifications', [AdminNotificationController::class, 'store']);
+            Route::post('notifications/{notification}/publish', [AdminNotificationController::class, 'publish']);
+            Route::post('notifications/{notification}/archive', [AdminNotificationController::class, 'archive']);
 
             Route::get('settings', [SettingsController::class, 'index']);
             Route::put('settings', [SettingsController::class, 'update']);

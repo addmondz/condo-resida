@@ -38,6 +38,7 @@ class VisitorRegistration extends Model
         'notes',
         'entry_type',
         'qr_token_hash',
+        'encrypted_qr_token',
         'status',
         'checked_in_at',
         'checked_in_by',
@@ -61,6 +62,7 @@ class VisitorRegistration extends Model
             'status' => VisitorStatus::class,
             'purpose' => VisitorPurpose::class,
             'entry_type' => EntryType::class,
+            'encrypted_qr_token' => 'encrypted',
             'checked_in_at' => 'datetime',
             'checked_out_at' => 'datetime',
             'cancelled_at' => 'datetime',
@@ -81,7 +83,7 @@ class VisitorRegistration extends Model
             }
 
             if (empty($model->reference_number)) {
-                $model->reference_number = 'VR-' . now()->format('Ymd') . '-' . strtoupper(Str::random(5));
+                $model->reference_number = 'VR-'.now()->format('Ymd').'-'.strtoupper(Str::random(5));
             }
         });
     }

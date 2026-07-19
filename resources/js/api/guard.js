@@ -1,12 +1,12 @@
-import client from './client';
+import client from "./client";
 
 export default {
     getDashboard() {
-        return client.get('/guard/dashboard');
+        return client.get("/guard/dashboard");
     },
 
     validateQr(data) {
-        return client.post('/guard/qr/validate', data);
+        return client.post("/guard/qr/validate", data);
     },
 
     checkIn(uuid, data = {}) {
@@ -18,7 +18,7 @@ export default {
     },
 
     getVisitors(params = {}) {
-        return client.get('/guard/visitors', { params });
+        return client.get("/guard/visitors", { params });
     },
 
     getVisitor(uuid) {
@@ -26,6 +26,6 @@ export default {
     },
 
     getActivityLogs(params = {}) {
-        return client.get('/guard/activity-logs', { params });
+        return client.get("/guard/activity-logs", { params });
     },
 };

@@ -4,6 +4,7 @@ namespace App\Http\Requests\Admin;
 
 use App\Enums\NotificationTargetType;
 use App\Enums\NotificationType;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
 
@@ -20,7 +21,7 @@ class StoreNotificationRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -30,7 +31,12 @@ class StoreNotificationRequest extends FormRequest
             'type' => ['required', new Enum(NotificationType::class)],
             'target_type' => ['required', new Enum(NotificationTargetType::class)],
             'target_id' => ['nullable', 'integer'],
+            'property_uuid' => ['nullable', 'exists:properties,uuid'],
+            'block_uuid' => ['nullable', 'exists:blocks,uuid'],
+            'resident_uuids' => ['nullable', 'array'],
+            'resident_uuids.*' => ['string', 'exists:users,uuid'],
             'property_id' => ['nullable', 'exists:properties,id'],
+            'status' => ['nullable', 'string', 'in:draft,published'],
         ];
     }
 }

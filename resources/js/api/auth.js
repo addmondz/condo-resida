@@ -1,44 +1,48 @@
-import client from './client';
+import client from "./client";
 
 export default {
     async getCsrfCookie() {
-        return axios.get('/sanctum/csrf-cookie');
+        return axios.get("/sanctum/csrf-cookie");
     },
 
     async register(data) {
         await this.getCsrfCookie();
-        return client.post('/auth/register', data);
+        return client.post("/auth/register", data);
     },
 
     async login(credentials) {
         await this.getCsrfCookie();
-        return client.post('/auth/login', credentials);
+        return client.post("/auth/login", credentials);
     },
 
     async logout() {
-        return client.post('/auth/logout');
+        return client.post("/auth/logout");
     },
 
     async me() {
-        return client.get('/auth/me');
+        return client.get("/auth/me");
     },
 
     async forgotPassword(data) {
         await this.getCsrfCookie();
-        return client.post('/auth/forgot-password', data);
+        return client.post("/auth/forgot-password", data);
     },
 
     async resetPassword(data) {
         await this.getCsrfCookie();
-        return client.post('/auth/reset-password', data);
+        return client.post("/auth/reset-password", data);
     },
 
     async changePassword(data) {
-        return client.put('/auth/change-password', data);
+        return client.put("/auth/change-password", data);
+    },
+
+    async completeOnboarding(data) {
+        return client.post("/auth/onboarding", data);
     },
 
     async getProperties() {
-        return client.get('/auth/properties');
+        return client.get("/auth/properties");
     },
 
     async getBlocks(propertyUuid) {

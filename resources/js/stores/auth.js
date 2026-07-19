@@ -1,36 +1,49 @@
-import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
-import authApi from '@/api/auth';
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
+import authApi from "@/api/auth";
 
-export const useAuthStore = defineStore('auth', () => {
+export const useAuthStore = defineStore("auth", () => {
     const user = ref(null);
-    const token = ref(localStorage.getItem('auth_token'));
+    const token = ref(localStorage.getItem("auth_token"));
     const loading = ref(false);
     const initialized = ref(false);
 
     const isAuthenticated = computed(() => !!user.value && !!token.value);
-    const isApproved = computed(() => user.value?.status === 'approved');
-    const isPending = computed(() => user.value?.status === 'pending');
-    const isRejected = computed(() => user.value?.status === 'rejected');
-    const isSuspended = computed(() => user.value?.status === 'suspended');
-    const userRole = computed(() => user.value?.roles?.[0]?.name || null);
-    const isAdmin = computed(() => ['super_admin', 'property_admin'].includes(userRole.value));
-    const isSuperAdmin = computed(() => userRole.value === 'super_admin');
-    const isGuard = computed(() => userRole.value === 'guard');
-    const isResident = computed(() => userRole.value === 'resident');
+    const isApproved = computed(() => user.value?.status === "approved");
+    const isPending = computed(() => user.value?.status === "pending");
+    const isRejected = computed(() => user.value?.status === "rejected");
+    const isSuspended = computed(() => user.value?.status === "suspended");
+    const needsOnboarding = computed(
+        () => user.value && !user.value.has_unit_assignment,
+    );
+    const userRole = computed(() => {
+        const role = user.value?.roles?.[0];
+
+        if (typeof role === "string") {
+            return role;
+        }
+
+        return role?.name || null;
+    });
+    const isAdmin = computed(() =>
+        ["super_admin", "property_admin"].includes(userRole.value),
+    );
+    const isSuperAdmin = computed(() => userRole.value === "super_admin");
+    const isGuard = computed(() => userRole.value === "guard");
+    const isResident = computed(() => userRole.value === "resident");
 
     function setAuth(userData, authToken) {
         user.value = userData;
         token.value = authToken;
         if (authToken) {
-            localStorage.setItem('auth_token', authToken);
+            localStorage.setItem("auth_token", authToken);
         }
     }
 
     function clearAuth() {
         user.value = null;
         token.value = null;
-        localStorage.removeItem('auth_token');
+        localStorage.removeItem("auth_token");
     }
 
     async function fetchUser() {
@@ -83,14 +96,15 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     function getHomePath() {
+        if (needsOnboarding.value) return "/onboarding";
         if (!isApproved.value) {
-            if (isPending.value) return '/pending-approval';
-            if (isRejected.value) return '/rejected';
-            return '/login';
+            if (isPending.value) return "/pending-approval";
+            if (isRejected.value) return "/rejected";
+            return "/login";
         }
-        if (isAdmin.value) return '/admin/dashboard';
-        if (isGuard.value) return '/guard/dashboard';
-        return '/resident/dashboard';
+        if (isAdmin.value) return "/admin/dashboard";
+        if (isGuard.value) return "/guard/dashboard";
+        return "/resident/dashboard";
     }
 
     return {
@@ -103,6 +117,7 @@ export const useAuthStore = defineStore('auth', () => {
         isPending,
         isRejected,
         isSuspended,
+        needsOnboarding,
         userRole,
         isAdmin,
         isSuperAdmin,

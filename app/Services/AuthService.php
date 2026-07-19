@@ -9,6 +9,7 @@ use App\Models\Property;
 use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
@@ -19,42 +20,58 @@ class AuthService
      * Register a new user.
      *
      * Creates user with pending status, assigns 'resident' role,
-     * creates the UserUnitAssignment, and generates a Sanctum token.
+     * and generates a Sanctum token. Property assignment happens during onboarding.
      *
      * @return array{user: User, token: string}
      */
     public function register(array $data): array
     {
-        $property = Property::where('uuid', $data['property_uuid'])->firstOrFail();
-        $block = Block::where('uuid', $data['block_uuid'])->firstOrFail();
-        $unit = Unit::where('uuid', $data['unit_uuid'])->firstOrFail();
+        return DB::transaction(function () use ($data): array {
+            $user = User::create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'],
+                'password' => $data['password'],
+                'status' => UserStatus::Pending,
+            ]);
 
-        $user = User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'phone' => $data['phone'],
-            'password' => $data['password'],
-            'status' => UserStatus::Pending,
-            'resident_type' => ResidentType::from($data['resident_type']),
-        ]);
+            $user->assignRole('resident');
 
-        $user->assignRole('resident');
+            $token = $user->createToken('auth-token')->plainTextToken;
 
-        $user->unitAssignments()->create([
-            'unit_id' => $unit->id,
-            'property_id' => $property->id,
-            'is_primary' => true,
-            'assigned_at' => now(),
-        ]);
+            $user->load('roles');
 
-        $token = $user->createToken('auth-token')->plainTextToken;
+            return [
+                'user' => $user,
+                'token' => $token,
+            ];
+        });
+    }
 
-        $user->load(['unitAssignments.unit.block.property', 'roles']);
+    /**
+     * Complete user onboarding by assigning property/unit details.
+     */
+    public function completeOnboarding(User $user, array $data): User
+    {
+        return DB::transaction(function () use ($user, $data): User {
+            $property = Property::where('uuid', $data['property_uuid'])->firstOrFail();
+            $unit = Unit::where('uuid', $data['unit_uuid'])->firstOrFail();
 
-        return [
-            'user' => $user,
-            'token' => $token,
-        ];
+            $user->update([
+                'resident_type' => ResidentType::from($data['resident_type']),
+            ]);
+
+            $user->unitAssignments()->create([
+                'unit_id' => $unit->id,
+                'property_id' => $property->id,
+                'is_primary' => true,
+                'assigned_at' => now(),
+            ]);
+
+            $user->load(['primaryUnit.unit.block.property', 'roles']);
+
+            return $user;
+        });
     }
 
     /**

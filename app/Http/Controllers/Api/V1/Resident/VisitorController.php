@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Resident;
 
+use App\Enums\VisitorStatus;
 use App\Http\Controllers\ApiResponseTrait;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Resident\StoreVisitorRequest;
@@ -27,8 +28,22 @@ class VisitorController extends Controller
         $query = VisitorRegistration::where('resident_id', auth()->id())
             ->with(['property', 'block', 'unit', 'checkedInBy', 'checkedOutBy']);
 
-        if ($request->filled('status')) {
+        if ($request->input('filter') === 'upcoming') {
+            $query->whereIn('status', [VisitorStatus::Active->value, VisitorStatus::CheckedIn->value]);
+        } elseif ($request->input('filter') === 'history') {
+            $query->whereNotIn('status', [VisitorStatus::Active->value, VisitorStatus::CheckedIn->value]);
+        } elseif ($request->filled('status')) {
             $query->where('status', $request->input('status'));
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('visitor_name', 'like', "%{$search}%")
+                    ->orWhere('contact_number', 'like', "%{$search}%")
+                    ->orWhere('vehicle_number', 'like', "%{$search}%")
+                    ->orWhere('reference_number', 'like', "%{$search}%");
+            });
         }
 
         if ($request->filled('date')) {
@@ -99,12 +114,16 @@ class VisitorController extends Controller
     {
         $this->authorize('view', $visitor);
 
+        if ($visitor->status !== VisitorStatus::Active || ! $visitor->encrypted_qr_token) {
+            return $this->error('This visitor QR code is no longer available.', 422, [
+                'visitor' => ['Only active visitor passes can display a QR code.'],
+            ]);
+        }
+
         return $this->success([
             'uuid' => $visitor->uuid,
             'reference_number' => $visitor->reference_number,
-            'visitor_name' => $visitor->visitor_name,
-            'visit_date' => $visitor->visit_date->format('Y-m-d'),
-            'status' => $visitor->status->label(),
+            'qr_token' => $visitor->encrypted_qr_token,
         ]);
     }
 }

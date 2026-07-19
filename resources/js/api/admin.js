@@ -1,13 +1,13 @@
-import client from './client';
+import client from "./client";
 
 export default {
     getDashboard() {
-        return client.get('/admin/dashboard');
+        return client.get("/admin/dashboard");
     },
 
     // Users
     getUsers(params = {}) {
-        return client.get('/admin/users', { params });
+        return client.get("/admin/users", { params });
     },
 
     getUser(uuid) {
@@ -40,7 +40,7 @@ export default {
 
     // Visitors
     getVisitors(params = {}) {
-        return client.get('/admin/visitors', { params });
+        return client.get("/admin/visitors", { params });
     },
 
     getVisitor(uuid) {
@@ -52,12 +52,15 @@ export default {
     },
 
     exportVisitors(params = {}) {
-        return client.get('/admin/visitors/export', { params, responseType: 'blob' });
+        return client.get("/admin/visitors/export", {
+            params,
+            responseType: "blob",
+        });
     },
 
     // Facilities
     getFacilities(params = {}) {
-        return client.get('/admin/facilities', { params });
+        return client.get("/admin/facilities", { params });
     },
 
     getFacility(uuid) {
@@ -65,20 +68,34 @@ export default {
     },
 
     createFacility(data) {
-        return client.post('/admin/facilities', data, {
-            headers: { 'Content-Type': 'multipart/form-data' },
+        return client.post("/admin/facilities", data, {
+            headers: { "Content-Type": "multipart/form-data" },
         });
     },
 
     updateFacility(uuid, data) {
         return client.post(`/admin/facilities/${uuid}`, data, {
-            headers: { 'Content-Type': 'multipart/form-data' },
+            headers: { "Content-Type": "multipart/form-data" },
         });
+    },
+
+    getFacilityBlockedSlots(uuid) {
+        return client.get(`/admin/facilities/${uuid}/blocked-slots`);
+    },
+
+    createFacilityBlockedSlot(uuid, data) {
+        return client.post(`/admin/facilities/${uuid}/blocked-slots`, data);
+    },
+
+    deleteFacilityBlockedSlot(uuid, slotId) {
+        return client.delete(
+            `/admin/facilities/${uuid}/blocked-slots/${slotId}`,
+        );
     },
 
     // Bookings
     getBookings(params = {}) {
-        return client.get('/admin/bookings', { params });
+        return client.get("/admin/bookings", { params });
     },
 
     getBooking(uuid) {
@@ -98,21 +115,32 @@ export default {
     },
 
     exportBookings(params = {}) {
-        return client.get('/admin/bookings/export', { params, responseType: 'blob' });
+        return client.get("/admin/bookings/export", {
+            params,
+            responseType: "blob",
+        });
     },
 
     // Notifications
     getNotifications(params = {}) {
-        return client.get('/admin/notifications', { params });
+        return client.get("/admin/notifications", { params });
     },
 
     createNotification(data) {
-        return client.post('/admin/notifications', data);
+        return client.post("/admin/notifications", data);
+    },
+
+    publishNotification(uuid) {
+        return client.post(`/admin/notifications/${uuid}/publish`);
+    },
+
+    archiveNotification(uuid) {
+        return client.post(`/admin/notifications/${uuid}/archive`);
     },
 
     // Properties
     getProperties() {
-        return client.get('/admin/properties');
+        return client.get("/admin/properties");
     },
 
     getBlocks(propertyUuid) {
@@ -125,10 +153,10 @@ export default {
 
     // Settings
     getSettings() {
-        return client.get('/admin/settings');
+        return client.get("/admin/settings");
     },
 
     updateSettings(data) {
-        return client.put('/admin/settings', data);
+        return client.put("/admin/settings", data);
     },
 };

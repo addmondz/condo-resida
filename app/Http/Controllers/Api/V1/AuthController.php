@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\OnboardingRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Http\Resources\BlockResource;
@@ -105,6 +106,22 @@ class AuthController extends Controller
         );
 
         return $this->success(message: 'Password changed successfully.');
+    }
+
+    /**
+     * Complete user onboarding (property/unit assignment).
+     */
+    public function onboarding(OnboardingRequest $request): JsonResponse
+    {
+        $user = auth()->user();
+
+        if ($user->unitAssignments()->exists()) {
+            return $this->error('Onboarding has already been completed.', 409);
+        }
+
+        $user = $this->authService->completeOnboarding($user, $request->validated());
+
+        return $this->success(new UserResource($user), 'Onboarding completed successfully.');
     }
 
     /**

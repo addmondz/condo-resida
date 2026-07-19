@@ -36,6 +36,7 @@ class UserResource extends JsonResource
                     ];
                 }
             ),
+            'has_unit_assignment' => $this->unitAssignments()->exists(),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

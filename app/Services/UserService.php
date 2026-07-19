@@ -8,6 +8,10 @@ use App\Models\User;
 
 class UserService
 {
+    public function __construct(
+        protected NotificationService $notificationService
+    ) {}
+
     /**
      * Approve a pending user registration.
      */
@@ -23,6 +27,8 @@ class UserService
             'new_status' => UserStatus::Approved->value,
             'performed_by' => $admin->id,
         ]);
+
+        $this->notificationService->notifyRegistrationApproved($user->id);
 
         return $user->fresh();
     }
@@ -43,6 +49,8 @@ class UserService
             'reason' => $reason,
             'performed_by' => $admin->id,
         ]);
+
+        $this->notificationService->notifyRegistrationRejected($user->id, $reason);
 
         return $user->fresh();
     }

@@ -11,14 +11,12 @@ use App\Models\FacilityBooking;
 use App\Models\User;
 use App\Models\VisitorRegistration;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
 
 class DashboardController extends Controller
 {
     use ApiResponseTrait;
 
-    /**
-     * Get admin dashboard statistics.
-     */
     public function dashboard(): JsonResponse
     {
         $stats = [
@@ -26,6 +24,7 @@ class DashboardController extends Controller
                 'total' => User::count(),
                 'pending' => User::where('status', UserStatus::Pending)->count(),
                 'approved' => User::where('status', UserStatus::Approved)->count(),
+                'rejected' => User::where('status', UserStatus::Rejected)->count(),
                 'suspended' => User::where('status', UserStatus::Suspended)->count(),
             ],
             'visitors' => [
@@ -44,8 +43,32 @@ class DashboardController extends Controller
                 'this_month' => FacilityBooking::whereMonth('booking_date', now()->month)
                     ->whereYear('booking_date', now()->year)->count(),
             ],
+            'visitors_daily' => $this->dailyCounts(VisitorRegistration::query(), 'visit_date', 7),
+            'bookings_daily' => $this->dailyCounts(FacilityBooking::query(), 'booking_date', 7),
         ];
 
         return $this->success($stats);
+    }
+
+    private function dailyCounts($query, string $dateColumn, int $days): array
+    {
+        $start = Carbon::today()->subDays($days - 1);
+        $counts = $query
+            ->whereDate($dateColumn, '>=', $start)
+            ->selectRaw("DATE({$dateColumn}) as date, COUNT(*) as count")
+            ->groupByRaw("DATE({$dateColumn})")
+            ->pluck('count', 'date')
+            ->toArray();
+
+        $result = [];
+        for ($i = 0; $i < $days; $i++) {
+            $date = $start->copy()->addDays($i)->toDateString();
+            $result[] = [
+                'date' => $date,
+                'count' => $counts[$date] ?? 0,
+            ];
+        }
+
+        return $result;
     }
 }

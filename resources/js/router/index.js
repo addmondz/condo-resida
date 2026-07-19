@@ -1,9 +1,9 @@
-import { createRouter, createWebHistory } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
-import authRoutes from './auth';
-import residentRoutes from './resident';
-import guardRoutes from './guard';
-import adminRoutes from './admin';
+import { createRouter, createWebHistory } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
+import authRoutes from "./auth";
+import residentRoutes from "./resident";
+import guardRoutes from "./guard";
+import adminRoutes from "./admin";
 
 const routes = [
     ...authRoutes,
@@ -11,9 +11,9 @@ const routes = [
     ...guardRoutes,
     ...adminRoutes,
     {
-        path: '/:pathMatch(.*)*',
-        name: 'not-found',
-        component: () => import('@/pages/NotFound.vue'),
+        path: "/:pathMatch(.*)*",
+        name: "not-found",
+        component: () => import("@/pages/NotFound.vue"),
     },
 ];
 
@@ -42,13 +42,17 @@ router.beforeEach(async (to) => {
 
     if (to.meta.requiresAuth) {
         if (!auth.isAuthenticated) {
-            return { name: 'login', query: { redirect: to.fullPath } };
+            return { name: "login", query: { redirect: to.fullPath } };
+        }
+
+        if (auth.needsOnboarding && to.name !== "onboarding") {
+            return { name: "onboarding" };
         }
 
         if (to.meta.requiresApproval && !auth.isApproved) {
-            if (auth.isPending) return { name: 'pending-approval' };
-            if (auth.isRejected) return { name: 'rejected' };
-            return { name: 'login' };
+            if (auth.isPending) return { name: "pending-approval" };
+            if (auth.isRejected) return { name: "rejected" };
+            return { name: "login" };
         }
 
         if (to.meta.roles) {

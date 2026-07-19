@@ -16,7 +16,6 @@ class DatabaseSeeder extends Seeder
             RoleAndPermissionSeeder::class,
             PropertySeeder::class,
             UserSeeder::class,
-            VisitorSeeder::class,
             FacilitySeeder::class,
             NotificationSeeder::class,
             SystemSettingSeeder::class,

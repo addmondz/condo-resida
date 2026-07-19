@@ -8,6 +8,7 @@ enum NotificationTargetType: string
     case Property = 'property';
     case Block = 'block';
     case Residents = 'residents';
+    case SelectedResidents = 'selected_residents';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum NotificationTargetType: string
             self::Property => 'Property',
             self::Block => 'Block',
             self::Residents => 'Residents',
+            self::SelectedResidents => 'Selected Residents',
         };
     }
 }

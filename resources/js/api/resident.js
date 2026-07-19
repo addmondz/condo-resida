@@ -1,20 +1,24 @@
-import client from './client';
+import client from "./client";
 
 export default {
+    getDashboard() {
+        return client.get("/resident/dashboard");
+    },
+
     getProfile() {
-        return client.get('/resident/profile');
+        return client.get("/resident/profile");
     },
 
     updateProfile(data) {
-        return client.put('/resident/profile', data);
+        return client.put("/resident/profile", data);
     },
 
     getVisitors(params = {}) {
-        return client.get('/resident/visitors', { params });
+        return client.get("/resident/visitors", { params });
     },
 
     createVisitor(data) {
-        return client.post('/resident/visitors', data);
+        return client.post("/resident/visitors", data);
     },
 
     getVisitor(uuid) {
@@ -30,7 +34,7 @@ export default {
     },
 
     getFacilities(params = {}) {
-        return client.get('/resident/facilities', { params });
+        return client.get("/resident/facilities", { params });
     },
 
     getFacility(uuid) {
@@ -38,15 +42,21 @@ export default {
     },
 
     getFacilityAvailability(uuid, params = {}) {
-        return client.get(`/resident/facilities/${uuid}/availability`, { params });
+        return client.get(`/resident/facilities/${uuid}/availability`, {
+            params,
+        });
     },
 
     getBookings(params = {}) {
-        return client.get('/resident/bookings', { params });
+        return client.get("/resident/bookings", { params });
+    },
+
+    getBooking(uuid) {
+        return client.get(`/resident/bookings/${uuid}`);
     },
 
     createBooking(data) {
-        return client.post('/resident/bookings', data);
+        return client.post("/resident/bookings", data);
     },
 
     cancelBooking(uuid, data = {}) {
@@ -54,7 +64,7 @@ export default {
     },
 
     getNotifications(params = {}) {
-        return client.get('/resident/notifications', { params });
+        return client.get("/resident/notifications", { params });
     },
 
     markNotificationRead(id) {
@@ -62,6 +72,6 @@ export default {
     },
 
     markAllNotificationsRead() {
-        return client.post('/resident/notifications/read-all');
+        return client.post("/resident/notifications/read-all");
     },
 };

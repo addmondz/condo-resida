@@ -1,68 +1,80 @@
-const AuthLayout = () => import('@/layouts/AuthLayout.vue');
+const AuthLayout = () => import("@/layouts/AuthLayout.vue");
 
 export default [
     {
-        path: '/',
-        redirect: '/login',
+        path: "/",
+        redirect: "/login",
     },
     {
-        path: '/login',
+        path: "/login",
         component: AuthLayout,
         children: [
             {
-                path: '',
-                name: 'login',
-                component: () => import('@/pages/auth/Login.vue'),
+                path: "",
+                name: "login",
+                component: () => import("@/pages/auth/Login.vue"),
                 meta: { guest: true },
             },
         ],
     },
     {
-        path: '/register',
+        path: "/register",
         component: AuthLayout,
         children: [
             {
-                path: '',
-                name: 'register',
-                component: () => import('@/pages/auth/Register.vue'),
+                path: "",
+                name: "register",
+                component: () => import("@/pages/auth/Register.vue"),
                 meta: { guest: true },
             },
         ],
     },
     {
-        path: '/forgot-password',
+        path: "/forgot-password",
         component: AuthLayout,
         children: [
             {
-                path: '',
-                name: 'forgot-password',
-                component: () => import('@/pages/auth/ForgotPassword.vue'),
+                path: "",
+                name: "forgot-password",
+                component: () => import("@/pages/auth/ForgotPassword.vue"),
                 meta: { guest: true },
             },
         ],
     },
     {
-        path: '/reset-password',
+        path: "/reset-password",
         component: AuthLayout,
         children: [
             {
-                path: '',
-                name: 'reset-password',
-                component: () => import('@/pages/auth/ResetPassword.vue'),
+                path: "",
+                name: "reset-password",
+                component: () => import("@/pages/auth/ResetPassword.vue"),
                 meta: { guest: true },
             },
         ],
     },
     {
-        path: '/pending-approval',
-        name: 'pending-approval',
-        component: () => import('@/pages/auth/PendingApproval.vue'),
+        path: "/onboarding",
+        component: AuthLayout,
+        children: [
+            {
+                path: "",
+                name: "onboarding",
+                component: () => import("@/pages/auth/Onboarding.vue"),
+                meta: { requiresAuth: true },
+            },
+        ],
+    },
+    {
+        path: "/pending-approval",
+        name: "pending-approval",
+        component: () => import("@/pages/auth/PendingApproval.vue"),
         meta: { requiresAuth: true },
     },
     {
-        path: '/rejected',
-        name: 'rejected',
-        component: () => import('@/pages/auth/Rejected.vue'),
+        path: "/rejected",
+        name: "rejected",
+        component: () => import("@/pages/auth/Rejected.vue"),
         meta: { requiresAuth: true },
     },
 ];

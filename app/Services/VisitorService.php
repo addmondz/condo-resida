@@ -14,6 +14,10 @@ use Illuminate\Validation\ValidationException;
 
 class VisitorService
 {
+    public function __construct(
+        protected NotificationService $notificationService
+    ) {}
+
     /**
      * Create a new visitor registration.
      *
@@ -56,6 +60,7 @@ class VisitorService
             'notes' => $data['notes'] ?? null,
             'entry_type' => EntryType::SingleEntry,
             'qr_token_hash' => $tokenHash,
+            'encrypted_qr_token' => $rawToken,
             'status' => VisitorStatus::Active,
         ]);
 
@@ -83,6 +88,48 @@ class VisitorService
         ]);
 
         return $visitor->fresh();
+    }
+
+    /**
+     * Inspect a QR token for the guard scanner and log the scan result.
+     *
+     * @return array{result: string, message: string, visitor: VisitorRegistration|null, can_check_in: bool, can_check_out: bool}
+     */
+    public function scanQrToken(string $token, User $guard): array
+    {
+        $tokenHash = hash('sha256', $token);
+        $visitor = VisitorRegistration::where('qr_token_hash', $tokenHash)
+            ->with(['resident', 'property', 'block', 'unit'])
+            ->first();
+
+        if (! $visitor) {
+            $this->logGuardActivity(null, $guard, 'invalid_qr_scanned', [
+                'result' => 'unknown_qr_code',
+            ]);
+
+            return [
+                'result' => 'unknown_qr_code',
+                'message' => 'Unknown QR code.',
+                'visitor' => null,
+                'can_check_in' => false,
+                'can_check_out' => false,
+            ];
+        }
+
+        $result = $this->scannerResultFor($visitor);
+
+        $this->logGuardActivity($visitor, $guard, $result['action'], [
+            'result' => $result['result'],
+            'reference_number' => $visitor->reference_number,
+        ]);
+
+        return [
+            'result' => $result['result'],
+            'message' => $result['message'],
+            'visitor' => $visitor,
+            'can_check_in' => $result['result'] === 'valid_for_check_in',
+            'can_check_out' => $result['result'] === 'already_checked_in',
+        ];
     }
 
     /**
@@ -144,9 +191,21 @@ class VisitorService
         return DB::transaction(function () use ($visitor, $guard, $notes) {
             $visitor = VisitorRegistration::lockForUpdate()->find($visitor->id);
 
+            if ($visitor->resident?->status === UserStatus::Suspended) {
+                throw ValidationException::withMessages([
+                    'visitor' => ['The resident account for this visitor pass is suspended.'],
+                ]);
+            }
+
+            if (! $visitor->visit_date->isToday()) {
+                throw ValidationException::withMessages([
+                    'visitor' => ['This visitor pass is not valid for today.'],
+                ]);
+            }
+
             if (! $visitor->canCheckIn()) {
                 throw ValidationException::withMessages([
-                    'visitor' => ['This visitor cannot be checked in. Current status: ' . $visitor->status->label()],
+                    'visitor' => ['This visitor cannot be checked in. Current status: '.$visitor->status->label()],
                 ]);
             }
 
@@ -156,19 +215,15 @@ class VisitorService
                 'checked_in_by' => $guard->id,
             ]);
 
-            VisitorActivityLog::create([
-                'visitor_registration_id' => $visitor->id,
-                'guard_id' => $guard->id,
-                'action' => 'checked_in',
-                'details' => [
-                    'notes' => $notes,
-                    'checked_in_at' => now()->toIso8601String(),
-                ],
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent(),
+            $this->logGuardActivity($visitor, $guard, 'visitor_checked_in', [
+                'notes' => $notes,
+                'checked_in_at' => now()->toIso8601String(),
             ]);
 
-            return $visitor->fresh(['resident', 'property', 'block', 'unit', 'checkedInBy']);
+            $fresh = $visitor->fresh(['resident', 'property', 'block', 'unit', 'checkedInBy']);
+            $this->notificationService->notifyVisitorCheckedIn($fresh->resident_id, $fresh->visitor_name);
+
+            return $fresh;
         });
     }
 
@@ -187,7 +242,7 @@ class VisitorService
 
             if (! $visitor->canCheckOut()) {
                 throw ValidationException::withMessages([
-                    'visitor' => ['This visitor cannot be checked out. Current status: ' . $visitor->status->label()],
+                    'visitor' => ['This visitor cannot be checked out. Current status: '.$visitor->status->label()],
                 ]);
             }
 
@@ -197,19 +252,15 @@ class VisitorService
                 'checked_out_by' => $guard->id,
             ]);
 
-            VisitorActivityLog::create([
-                'visitor_registration_id' => $visitor->id,
-                'guard_id' => $guard->id,
-                'action' => 'checked_out',
-                'details' => [
-                    'notes' => $notes,
-                    'checked_out_at' => now()->toIso8601String(),
-                ],
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent(),
+            $this->logGuardActivity($visitor, $guard, 'visitor_checked_out', [
+                'notes' => $notes,
+                'checked_out_at' => now()->toIso8601String(),
             ]);
 
-            return $visitor->fresh(['resident', 'property', 'block', 'unit', 'checkedOutBy']);
+            $fresh = $visitor->fresh(['resident', 'property', 'block', 'unit', 'checkedOutBy']);
+            $this->notificationService->notifyVisitorCheckedOut($fresh->resident_id, $fresh->visitor_name);
+
+            return $fresh;
         });
     }
 
@@ -226,5 +277,92 @@ class VisitorService
                 'status' => VisitorStatus::Expired,
                 'expired_at' => now(),
             ]);
+    }
+
+    /**
+     * Resolve the scanner-facing result for a visitor pass.
+     *
+     * @return array{result: string, message: string, action: string}
+     */
+    private function scannerResultFor(VisitorRegistration $visitor): array
+    {
+        if ($visitor->resident?->status === UserStatus::Suspended) {
+            return [
+                'result' => 'suspended_resident',
+                'message' => 'The resident account for this visitor pass is suspended.',
+                'action' => 'entry_rejected',
+            ];
+        }
+
+        return match ($visitor->status) {
+            VisitorStatus::Active => $this->activeScannerResultFor($visitor),
+            VisitorStatus::CheckedIn => [
+                'result' => 'already_checked_in',
+                'message' => 'Visitor is already checked in and can be checked out.',
+                'action' => 'qr_scanned',
+            ],
+            VisitorStatus::CheckedOut => [
+                'result' => 'already_checked_out',
+                'message' => 'This single-entry visitor pass has already been checked out.',
+                'action' => 'entry_rejected',
+            ],
+            VisitorStatus::Expired => [
+                'result' => 'expired',
+                'message' => 'This visitor pass has expired.',
+                'action' => 'expired_qr_scanned',
+            ],
+            VisitorStatus::Cancelled => [
+                'result' => 'cancelled',
+                'message' => 'This visitor pass has been cancelled.',
+                'action' => 'cancelled_qr_scanned',
+            ],
+            VisitorStatus::Rejected => [
+                'result' => 'invalid',
+                'message' => 'This visitor pass has been rejected.',
+                'action' => 'entry_rejected',
+            ],
+        };
+    }
+
+    /**
+     * Resolve scanner output for an active pass.
+     *
+     * @return array{result: string, message: string, action: string}
+     */
+    private function activeScannerResultFor(VisitorRegistration $visitor): array
+    {
+        if ($visitor->visit_date->isPast() && ! $visitor->visit_date->isToday()) {
+            return [
+                'result' => 'expired',
+                'message' => 'This visitor pass has expired.',
+                'action' => 'expired_qr_scanned',
+            ];
+        }
+
+        if (! $visitor->visit_date->isToday()) {
+            return [
+                'result' => 'not_valid_for_today',
+                'message' => 'This visitor pass is not valid for today.',
+                'action' => 'entry_rejected',
+            ];
+        }
+
+        return [
+            'result' => 'valid_for_check_in',
+            'message' => 'Visitor pass is valid for check-in.',
+            'action' => 'qr_scanned',
+        ];
+    }
+
+    private function logGuardActivity(?VisitorRegistration $visitor, User $guard, string $action, array $details = []): void
+    {
+        VisitorActivityLog::create([
+            'visitor_registration_id' => $visitor?->id,
+            'guard_id' => $guard->id,
+            'action' => $action,
+            'details' => $details,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
     }
 }

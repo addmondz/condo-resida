@@ -7,10 +7,15 @@ use App\Models\Facility;
 use App\Models\FacilityBooking;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class FacilityService
 {
+    public function __construct(
+        protected NotificationService $notificationService
+    ) {}
+
     /**
      * Get available time slots for a facility on a given date.
      *
@@ -67,6 +72,11 @@ class FacilityService
             // Check against blocked slots
             if ($slot['available']) {
                 foreach ($blockedSlots as $blocked) {
+                    if ($blocked->start_time === null || $blocked->end_time === null) {
+                        $slot['available'] = false;
+                        break;
+                    }
+
                     $blockedStart = Carbon::parse($blocked->start_time)->format('H:i');
                     $blockedEnd = Carbon::parse($blocked->end_time)->format('H:i');
 
@@ -90,79 +100,86 @@ class FacilityService
      */
     public function createBooking(User $resident, array $data): FacilityBooking
     {
-        $facility = Facility::where('uuid', $data['facility_uuid'])->firstOrFail();
+        return DB::transaction(function () use ($resident, $data): FacilityBooking {
+            $facility = Facility::where('uuid', $data['facility_uuid'])->lockForUpdate()->firstOrFail();
 
-        if (! $facility->is_active || $facility->is_under_maintenance) {
-            throw ValidationException::withMessages([
-                'facility' => ['This facility is currently unavailable.'],
+            if (! $facility->is_active || $facility->is_under_maintenance) {
+                throw ValidationException::withMessages([
+                    'facility' => ['This facility is currently unavailable.'],
+                ]);
+            }
+
+            // Check advance booking days
+            $bookingDate = Carbon::parse($data['booking_date']);
+            $maxDate = now()->addDays($facility->advance_booking_days);
+
+            if ($bookingDate->gt($maxDate)) {
+                throw ValidationException::withMessages([
+                    'booking_date' => ["Bookings can only be made up to {$facility->advance_booking_days} days in advance."],
+                ]);
+            }
+
+            // Check for conflicting bookings
+            $conflict = FacilityBooking::where('facility_id', $facility->id)
+                ->whereDate('booking_date', $data['booking_date'])
+                ->whereIn('status', [BookingStatus::Pending, BookingStatus::Approved])
+                ->where(function ($query) use ($data) {
+                    $query->where('start_time', '<', $data['end_time'])
+                        ->where('end_time', '>', $data['start_time']);
+                })
+                ->lockForUpdate()
+                ->exists();
+
+            if ($conflict) {
+                throw ValidationException::withMessages([
+                    'time' => ['This time slot is already booked.'],
+                ]);
+            }
+
+            // Check max bookings per resident
+            $activeBookings = FacilityBooking::where('facility_id', $facility->id)
+                ->where('resident_id', $resident->id)
+                ->whereIn('status', [BookingStatus::Pending, BookingStatus::Approved])
+                ->whereDate('booking_date', '>=', today())
+                ->count();
+
+            if ($activeBookings >= $facility->max_bookings_per_resident) {
+                throw ValidationException::withMessages([
+                    'booking' => ["You have reached the maximum of {$facility->max_bookings_per_resident} active bookings for this facility."],
+                ]);
+            }
+
+            // Check blocked slots
+            $blocked = $facility->blockedSlots()
+                ->whereDate('blocked_date', $data['booking_date'])
+                ->where(function ($query) use ($data) {
+                    $query->whereNull('start_time')
+                        ->orWhere(function ($timeQuery) use ($data) {
+                            $timeQuery->where('start_time', '<', $data['end_time'])
+                                ->where('end_time', '>', $data['start_time']);
+                        });
+                })
+                ->lockForUpdate()
+                ->exists();
+
+            if ($blocked) {
+                throw ValidationException::withMessages([
+                    'time' => ['This time slot is blocked and unavailable.'],
+                ]);
+            }
+
+            $booking = FacilityBooking::create([
+                'facility_id' => $facility->id,
+                'resident_id' => $resident->id,
+                'booking_date' => $data['booking_date'],
+                'start_time' => $data['start_time'],
+                'end_time' => $data['end_time'],
+                'status' => BookingStatus::Pending,
+                'notes' => $data['notes'] ?? null,
             ]);
-        }
 
-        // Check advance booking days
-        $bookingDate = Carbon::parse($data['booking_date']);
-        $maxDate = now()->addDays($facility->advance_booking_days);
-
-        if ($bookingDate->gt($maxDate)) {
-            throw ValidationException::withMessages([
-                'booking_date' => ["Bookings can only be made up to {$facility->advance_booking_days} days in advance."],
-            ]);
-        }
-
-        // Check for conflicting bookings
-        $conflict = FacilityBooking::where('facility_id', $facility->id)
-            ->whereDate('booking_date', $data['booking_date'])
-            ->whereIn('status', [BookingStatus::Pending, BookingStatus::Approved])
-            ->where(function ($query) use ($data) {
-                $query->where('start_time', '<', $data['end_time'])
-                    ->where('end_time', '>', $data['start_time']);
-            })
-            ->exists();
-
-        if ($conflict) {
-            throw ValidationException::withMessages([
-                'time' => ['This time slot is already booked.'],
-            ]);
-        }
-
-        // Check max bookings per resident
-        $activeBookings = FacilityBooking::where('facility_id', $facility->id)
-            ->where('resident_id', $resident->id)
-            ->whereIn('status', [BookingStatus::Pending, BookingStatus::Approved])
-            ->whereDate('booking_date', '>=', today())
-            ->count();
-
-        if ($activeBookings >= $facility->max_bookings_per_resident) {
-            throw ValidationException::withMessages([
-                'booking' => ["You have reached the maximum of {$facility->max_bookings_per_resident} active bookings for this facility."],
-            ]);
-        }
-
-        // Check blocked slots
-        $blocked = $facility->blockedSlots()
-            ->whereDate('blocked_date', $data['booking_date'])
-            ->where(function ($query) use ($data) {
-                $query->where('start_time', '<', $data['end_time'])
-                    ->where('end_time', '>', $data['start_time']);
-            })
-            ->exists();
-
-        if ($blocked) {
-            throw ValidationException::withMessages([
-                'time' => ['This time slot is blocked and unavailable.'],
-            ]);
-        }
-
-        $booking = FacilityBooking::create([
-            'facility_id' => $facility->id,
-            'resident_id' => $resident->id,
-            'booking_date' => $data['booking_date'],
-            'start_time' => $data['start_time'],
-            'end_time' => $data['end_time'],
-            'status' => BookingStatus::Pending,
-            'notes' => $data['notes'] ?? null,
-        ]);
-
-        return $booking->load(['facility', 'resident']);
+            return $booking->load(['facility', 'resident']);
+        });
     }
 
     /**
@@ -170,13 +187,65 @@ class FacilityService
      */
     public function approveBooking(FacilityBooking $booking, User $admin): FacilityBooking
     {
-        $booking->update([
-            'status' => BookingStatus::Approved,
-            'approved_by' => $admin->id,
-            'approved_at' => now(),
-        ]);
+        return DB::transaction(function () use ($booking, $admin): FacilityBooking {
+            $booking = FacilityBooking::lockForUpdate()->findOrFail($booking->id);
 
-        return $booking->fresh(['facility', 'resident', 'approvedBy']);
+            if ($booking->status !== BookingStatus::Pending) {
+                throw ValidationException::withMessages([
+                    'booking' => ['Only pending bookings can be approved.'],
+                ]);
+            }
+
+            $conflict = FacilityBooking::where('facility_id', $booking->facility_id)
+                ->whereDate('booking_date', $booking->booking_date)
+                ->where('id', '!=', $booking->id)
+                ->where('status', BookingStatus::Approved)
+                ->where(function ($query) use ($booking) {
+                    $query->where('start_time', '<', $booking->end_time)
+                        ->where('end_time', '>', $booking->start_time);
+                })
+                ->lockForUpdate()
+                ->exists();
+
+            if ($conflict) {
+                throw ValidationException::withMessages([
+                    'time' => ['This booking conflicts with an already approved booking.'],
+                ]);
+            }
+
+            $blocked = $booking->facility->blockedSlots()
+                ->whereDate('blocked_date', $booking->booking_date)
+                ->where(function ($query) use ($booking) {
+                    $query->whereNull('start_time')
+                        ->orWhere(function ($timeQuery) use ($booking) {
+                            $timeQuery->where('start_time', '<', $booking->end_time)
+                                ->where('end_time', '>', $booking->start_time);
+                        });
+                })
+                ->lockForUpdate()
+                ->exists();
+
+            if ($blocked) {
+                throw ValidationException::withMessages([
+                    'time' => ['This booking conflicts with a blocked facility slot.'],
+                ]);
+            }
+
+            $booking->update([
+                'status' => BookingStatus::Approved,
+                'approved_by' => $admin->id,
+                'approved_at' => now(),
+            ]);
+
+            $fresh = $booking->fresh(['facility', 'resident', 'approvedBy']);
+            $this->notificationService->notifyBookingApproved(
+                $fresh->resident_id,
+                $fresh->facility->name,
+                $fresh->booking_date->format('Y-m-d')
+            );
+
+            return $fresh;
+        });
     }
 
     /**
@@ -191,7 +260,15 @@ class FacilityService
             'approved_at' => now(),
         ]);
 
-        return $booking->fresh(['facility', 'resident']);
+        $fresh = $booking->fresh(['facility', 'resident']);
+        $this->notificationService->notifyBookingRejected(
+            $fresh->resident_id,
+            $fresh->facility->name,
+            $fresh->booking_date->format('Y-m-d'),
+            $reason
+        );
+
+        return $fresh;
     }
 
     /**

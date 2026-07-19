@@ -1,242 +1,167 @@
 <template>
-  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-    <h2 class="text-xl font-semibold text-gray-900 mb-6">Create an account</h2>
+    <div>
+        <div class="mb-8 hidden lg:block">
+            <h2 class="text-2xl font-bold text-gray-900">Create an account</h2>
+            <p class="mt-1 text-sm text-gray-500">
+                Get started with Resida in seconds
+            </p>
+        </div>
 
-    <div v-if="errorMessage" class="mb-4 rounded-md bg-red-50 p-4">
-      <p class="text-sm text-red-700">{{ errorMessage }}</p>
+        <div class="rounded-xl border border-gray-200 bg-white">
+            <div class="px-5 py-5 sm:px-6 sm:py-6">
+                <div
+                    v-if="errorMessage"
+                    class="mb-5 flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 px-5 py-4"
+                >
+                    <svg
+                        class="mt-0.5 h-5 w-5 shrink-0 text-red-500"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
+                        />
+                    </svg>
+                    <p class="text-sm text-red-700">{{ errorMessage }}</p>
+                </div>
+
+                <form @submit.prevent="handleRegister" class="space-y-5">
+                    <AppInput
+                        v-model="form.name"
+                        label="Full name"
+                        placeholder="John Doe"
+                        :error="errors.name"
+                        required
+                    />
+
+                    <AppInput
+                        v-model="form.email"
+                        label="Email address"
+                        type="email"
+                        placeholder="you@example.com"
+                        :error="errors.email"
+                        required
+                    />
+
+                    <AppInput
+                        v-model="form.phone"
+                        label="Phone number"
+                        type="tel"
+                        placeholder="+60123456789"
+                        :error="errors.phone"
+                        required
+                    />
+
+                    <AppInput
+                        v-model="form.password"
+                        label="Password"
+                        type="password"
+                        placeholder="Create a password"
+                        :error="errors.password"
+                        required
+                    />
+
+                    <AppInput
+                        v-model="form.password_confirmation"
+                        label="Confirm password"
+                        type="password"
+                        placeholder="Confirm your password"
+                        :error="errors.password_confirmation"
+                        required
+                    />
+
+                    <AppButton type="submit" :loading="loading" class="w-full">
+                        Create account
+                    </AppButton>
+                </form>
+
+                <div class="relative my-6">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-gray-200"></div>
+                    </div>
+                    <div class="relative flex justify-center text-sm">
+                        <span class="bg-white px-3 text-gray-400"
+                            >Already have an account?</span
+                        >
+                    </div>
+                </div>
+
+                <router-link
+                    :to="{ name: 'login' }"
+                    class="flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-all hover:bg-gray-50 active:scale-[0.98]"
+                >
+                    Sign in instead
+                </router-link>
+            </div>
+        </div>
     </div>
-
-    <form @submit.prevent="handleRegister" class="space-y-4">
-      <AppInput
-        v-model="form.name"
-        label="Full Name"
-        placeholder="John Doe"
-        :error="errors.name"
-        required
-      />
-
-      <AppInput
-        v-model="form.email"
-        label="Email"
-        type="email"
-        placeholder="you@example.com"
-        :error="errors.email"
-        required
-      />
-
-      <AppInput
-        v-model="form.phone"
-        label="Phone"
-        type="tel"
-        placeholder="+60123456789"
-        :error="errors.phone"
-        required
-      />
-
-      <AppSelect
-        v-model="form.property_uuid"
-        label="Property"
-        :options="propertyOptions"
-        placeholder="Select a property"
-        :error="errors.property_uuid"
-        required
-      />
-
-      <AppSelect
-        v-model="form.block_uuid"
-        label="Block"
-        :options="blockOptions"
-        placeholder="Select a block"
-        :disabled="!form.property_uuid || loadingBlocks"
-        :error="errors.block_uuid"
-        required
-      />
-
-      <AppSelect
-        v-model="form.unit_uuid"
-        label="Unit"
-        :options="unitOptions"
-        placeholder="Select a unit"
-        :disabled="!form.block_uuid || loadingUnits"
-        :error="errors.unit_uuid"
-        required
-      />
-
-      <AppSelect
-        v-model="form.resident_type"
-        label="Resident Type"
-        :options="residentTypeOptions"
-        placeholder="Select resident type"
-        :error="errors.resident_type"
-        required
-      />
-
-      <AppInput
-        v-model="form.password"
-        label="Password"
-        type="password"
-        placeholder="Create a password"
-        :error="errors.password"
-        required
-      />
-
-      <AppInput
-        v-model="form.password_confirmation"
-        label="Confirm Password"
-        type="password"
-        placeholder="Confirm your password"
-        :error="errors.password_confirmation"
-        required
-      />
-
-      <AppButton type="submit" :loading="loading" class="w-full">
-        Register
-      </AppButton>
-    </form>
-
-    <p class="mt-6 text-center text-sm text-gray-500">
-      Already have an account?
-      <router-link :to="{ name: 'login' }" class="font-medium text-primary-600 hover:text-primary-500">
-        Sign in
-      </router-link>
-    </p>
-  </div>
 </template>
 
 <script setup>
-import { ref, reactive, watch, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
-import authApi from '@/api/auth';
-import AppInput from '@/components/common/AppInput.vue';
-import AppSelect from '@/components/common/AppSelect.vue';
-import AppButton from '@/components/common/AppButton.vue';
+import { ref, reactive } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
+import AppInput from "@/components/common/AppInput.vue";
+import AppButton from "@/components/common/AppButton.vue";
 
 const router = useRouter();
 const auth = useAuthStore();
 
 const form = reactive({
-  name: '',
-  email: '',
-  phone: '',
-  property_uuid: '',
-  block_uuid: '',
-  unit_uuid: '',
-  resident_type: '',
-  password: '',
-  password_confirmation: '',
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    password_confirmation: "",
 });
 
 const errors = reactive({
-  name: '',
-  email: '',
-  phone: '',
-  property_uuid: '',
-  block_uuid: '',
-  unit_uuid: '',
-  resident_type: '',
-  password: '',
-  password_confirmation: '',
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    password_confirmation: "",
 });
 
 const loading = ref(false);
-const errorMessage = ref('');
-
-const properties = ref([]);
-const blocks = ref([]);
-const units = ref([]);
-const loadingBlocks = ref(false);
-const loadingUnits = ref(false);
-
-const residentTypeOptions = [
-  { value: 'owner', label: 'Owner' },
-  { value: 'tenant', label: 'Tenant' },
-];
-
-const propertyOptions = ref([]);
-const blockOptions = ref([]);
-const unitOptions = ref([]);
-
-onMounted(async () => {
-  try {
-    const { data } = await authApi.getProperties();
-    properties.value = data.data;
-    propertyOptions.value = properties.value.map((p) => ({ value: p.uuid, label: p.name }));
-  } catch {
-    errorMessage.value = 'Failed to load properties.';
-  }
-});
-
-watch(() => form.property_uuid, async (newVal) => {
-  form.block_uuid = '';
-  form.unit_uuid = '';
-  blocks.value = [];
-  units.value = [];
-  blockOptions.value = [];
-  unitOptions.value = [];
-
-  if (!newVal) return;
-
-  loadingBlocks.value = true;
-  try {
-    const { data } = await authApi.getBlocks(newVal);
-    blocks.value = data.data;
-    blockOptions.value = blocks.value.map((b) => ({ value: b.uuid, label: b.name }));
-  } catch {
-    errorMessage.value = 'Failed to load blocks.';
-  } finally {
-    loadingBlocks.value = false;
-  }
-});
-
-watch(() => form.block_uuid, async (newVal) => {
-  form.unit_uuid = '';
-  units.value = [];
-  unitOptions.value = [];
-
-  if (!newVal) return;
-
-  loadingUnits.value = true;
-  try {
-    const { data } = await authApi.getUnits(newVal);
-    units.value = data.data;
-    unitOptions.value = units.value.map((u) => ({ value: u.uuid, label: u.number }));
-  } catch {
-    errorMessage.value = 'Failed to load units.';
-  } finally {
-    loadingUnits.value = false;
-  }
-});
+const errorMessage = ref("");
 
 function clearErrors() {
-  Object.keys(errors).forEach((key) => { errors[key] = ''; });
-  errorMessage.value = '';
+    Object.keys(errors).forEach((key) => {
+        errors[key] = "";
+    });
+    errorMessage.value = "";
 }
 
 async function handleRegister() {
-  clearErrors();
-  loading.value = true;
+    clearErrors();
+    loading.value = true;
 
-  try {
-    await auth.register(form);
-    router.push({ name: 'pending-approval' });
-  } catch (error) {
-    const response = error.response;
-    if (response?.status === 422) {
-      const data = response.data;
-      if (data.errors) {
-        Object.keys(data.errors).forEach((key) => {
-          if (errors.hasOwnProperty(key)) {
-            errors[key] = data.errors[key][0];
-          }
-        });
-      }
-      errorMessage.value = data.message || '';
-    } else {
-      errorMessage.value = 'An unexpected error occurred. Please try again.';
+    try {
+        await auth.register(form);
+        router.push({ name: "onboarding" });
+    } catch (error) {
+        const response = error.response;
+        if (response?.status === 422) {
+            const data = response.data;
+            if (data.errors) {
+                Object.keys(data.errors).forEach((key) => {
+                    if (Object.prototype.hasOwnProperty.call(errors, key)) {
+                        errors[key] = data.errors[key][0];
+                    }
+                });
+            }
+            errorMessage.value = data.message || "";
+        } else {
+            errorMessage.value =
+                "An unexpected error occurred. Please try again.";
+        }
+    } finally {
+        loading.value = false;
     }
-  } finally {
-    loading.value = false;
-  }
 }
 </script>
