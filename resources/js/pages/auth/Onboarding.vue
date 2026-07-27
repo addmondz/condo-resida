@@ -1,44 +1,47 @@
 <template>
-    <div>
+    <div class="animate-fade-in-up">
         <div class="mb-8 hidden lg:block">
-            <h2 class="text-2xl font-bold text-gray-900">
+            <h2 class="text-[22px] font-semibold tracking-tight text-zinc-900">
                 Complete your profile
             </h2>
-            <p class="mt-1 text-sm text-gray-500">
+            <p class="mt-1.5 text-[14px] text-zinc-500">
                 Tell us where you live so we can set up your account
             </p>
         </div>
 
-        <div class="rounded-xl border border-gray-200 bg-white">
-            <div class="border-b border-gray-100 px-5 py-4 lg:hidden">
-                <h2 class="text-base font-semibold text-gray-900">
+        <div class="rounded-2xl border border-zinc-200/80 bg-white shadow-sm shadow-zinc-900/[0.04]">
+            <!-- Mobile header -->
+            <div class="border-b border-zinc-100 p-6 lg:hidden">
+                <h2 class="text-[16px] font-semibold text-zinc-900">
                     Complete your profile
                 </h2>
-                <p class="mt-0.5 text-sm text-gray-500">
+                <p class="mt-1 text-[13px] text-zinc-500">
                     Tell us where you live so we can set up your account
                 </p>
             </div>
 
-            <div class="px-5 py-5 sm:px-6 sm:py-6">
-                <div
-                    v-if="errorMessage"
-                    class="mb-5 flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 px-5 py-4"
-                >
-                    <svg
-                        class="mt-0.5 h-5 w-5 shrink-0 text-red-500"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke-width="1.5"
-                        stroke="currentColor"
+            <div class="p-6 sm:p-7">
+                <Transition name="page-fade">
+                    <div
+                        v-if="errorMessage"
+                        class="mb-6 flex items-start gap-3 rounded-xl border border-red-100 bg-red-50/80 px-4 py-3.5"
                     >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
-                        />
-                    </svg>
-                    <p class="text-sm text-red-700">{{ errorMessage }}</p>
-                </div>
+                        <svg
+                            class="mt-0.5 h-4 w-4 shrink-0 text-red-500"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="2"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
+                            />
+                        </svg>
+                        <p class="text-[13px] leading-snug text-red-700">{{ errorMessage }}</p>
+                    </div>
+                </Transition>
 
                 <form @submit.prevent="handleOnboarding" class="space-y-5">
                     <AppSelect
@@ -79,7 +82,7 @@
                         required
                     />
 
-                    <AppButton type="submit" :loading="loading" class="w-full">
+                    <AppButton type="submit" :loading="loading" size="lg" class="!mt-7 w-full">
                         Continue
                     </AppButton>
                 </form>

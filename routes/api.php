@@ -1,10 +1,13 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\BlockController;
 use App\Http\Controllers\Api\V1\Admin\BookingController as AdminBookingController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Api\V1\Admin\FacilityController as AdminFacilityController;
 use App\Http\Controllers\Api\V1\Admin\NotificationController as AdminNotificationController;
+use App\Http\Controllers\Api\V1\Admin\PropertyController;
 use App\Http\Controllers\Api\V1\Admin\SettingsController;
+use App\Http\Controllers\Api\V1\Admin\UnitController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Api\V1\Admin\VisitorController as AdminVisitorController;
 use App\Http\Controllers\Api\V1\AuthController;
@@ -100,6 +103,8 @@ Route::prefix('v1')->group(function () {
         Route::prefix('admin')->middleware('role:super_admin|property_admin')->group(function () {
             Route::get('dashboard', [AdminDashboardController::class, 'dashboard']);
 
+            // Users
+            Route::post('users', [UserController::class, 'store']);
             Route::get('users', [UserController::class, 'index']);
             Route::get('users/{user}', [UserController::class, 'show']);
             Route::put('users/{user}', [UserController::class, 'update']);
@@ -109,19 +114,23 @@ Route::prefix('v1')->group(function () {
             Route::post('users/{user}/reactivate', [UserController::class, 'reactivate']);
             Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword']);
 
+            // Visitors
             Route::get('visitors', [AdminVisitorController::class, 'index']);
             Route::get('visitors/export', [AdminVisitorController::class, 'export']);
             Route::get('visitors/{visitor}', [AdminVisitorController::class, 'show']);
             Route::post('visitors/{visitor}/cancel', [AdminVisitorController::class, 'cancel']);
 
+            // Facilities
             Route::get('facilities', [AdminFacilityController::class, 'index']);
             Route::post('facilities', [AdminFacilityController::class, 'store']);
             Route::get('facilities/{facility}', [AdminFacilityController::class, 'show']);
             Route::post('facilities/{facility}', [AdminFacilityController::class, 'update']);
+            Route::delete('facilities/{facility}', [AdminFacilityController::class, 'destroy']);
             Route::get('facilities/{facility}/blocked-slots', [AdminFacilityController::class, 'blockedSlots']);
             Route::post('facilities/{facility}/blocked-slots', [AdminFacilityController::class, 'storeBlockedSlot']);
             Route::delete('facilities/{facility}/blocked-slots/{blockedSlot}', [AdminFacilityController::class, 'destroyBlockedSlot']);
 
+            // Bookings
             Route::get('bookings', [AdminBookingController::class, 'index']);
             Route::get('bookings/export', [AdminBookingController::class, 'export']);
             Route::get('bookings/{booking}', [AdminBookingController::class, 'show']);
@@ -129,17 +138,36 @@ Route::prefix('v1')->group(function () {
             Route::post('bookings/{booking}/reject', [AdminBookingController::class, 'reject']);
             Route::post('bookings/{booking}/cancel', [AdminBookingController::class, 'cancel']);
 
+            // Notifications
             Route::get('notifications', [AdminNotificationController::class, 'index']);
             Route::post('notifications', [AdminNotificationController::class, 'store']);
+            Route::get('notifications/{notification}', [AdminNotificationController::class, 'show']);
             Route::post('notifications/{notification}/publish', [AdminNotificationController::class, 'publish']);
             Route::post('notifications/{notification}/archive', [AdminNotificationController::class, 'archive']);
 
+            // Properties
+            Route::get('properties', [PropertyController::class, 'index']);
+            Route::post('properties', [PropertyController::class, 'store']);
+            Route::get('properties/{property}', [PropertyController::class, 'show']);
+            Route::put('properties/{property}', [PropertyController::class, 'update']);
+            Route::delete('properties/{property}', [PropertyController::class, 'destroy']);
+
+            // Blocks under properties
+            Route::get('properties/{property}/blocks', [BlockController::class, 'index']);
+            Route::post('properties/{property}/blocks', [BlockController::class, 'store']);
+            Route::get('properties/{property}/blocks/{block}', [BlockController::class, 'show']);
+            Route::put('properties/{property}/blocks/{block}', [BlockController::class, 'update']);
+            Route::delete('properties/{property}/blocks/{block}', [BlockController::class, 'destroy']);
+
+            // Units under blocks
+            Route::get('blocks/{block}/units', [UnitController::class, 'index']);
+            Route::post('blocks/{block}/units', [UnitController::class, 'store']);
+            Route::put('blocks/{block}/units/{unit}', [UnitController::class, 'update']);
+            Route::delete('blocks/{block}/units/{unit}', [UnitController::class, 'destroy']);
+
+            // Settings
             Route::get('settings', [SettingsController::class, 'index']);
             Route::put('settings', [SettingsController::class, 'update']);
-
-            Route::get('properties', [AuthController::class, 'properties']);
-            Route::get('properties/{property}/blocks', [AuthController::class, 'blocks']);
-            Route::get('blocks/{block}/units', [AuthController::class, 'units']);
         });
     });
 });

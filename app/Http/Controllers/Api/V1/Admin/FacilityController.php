@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\ApiResponseTrait;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\ScopesToProperty;
 use App\Http\Requests\Admin\StoreFacilityRequest;
 use App\Http\Resources\FacilityResource;
 use App\Models\Facility;
@@ -15,13 +16,13 @@ use Illuminate\Http\Request;
 class FacilityController extends Controller
 {
     use ApiResponseTrait;
+    use ScopesToProperty;
 
-    /**
-     * List all facilities.
-     */
     public function index(Request $request): JsonResponse
     {
         $query = Facility::with('property');
+
+        $this->applyPropertyScope($query);
 
         if ($request->filled('property_id')) {
             $query->where('property_id', $request->input('property_id'));
@@ -32,24 +33,27 @@ class FacilityController extends Controller
         return $this->success(FacilityResource::collection($facilities)->response()->getData(true));
     }
 
-    /**
-     * Show a specific facility.
-     */
     public function show(Facility $facility): JsonResponse
     {
+        if (! $this->authorizePropertyAccess($facility->property)) {
+            return $this->unauthorized('You do not have access to this facility.');
+        }
+
         $facility->load('property');
 
         return $this->success(new FacilityResource($facility));
     }
 
-    /**
-     * Create a new facility.
-     */
     public function store(StoreFacilityRequest $request): JsonResponse
     {
         $data = $request->validated();
 
         $property = Property::where('uuid', $data['property_uuid'])->firstOrFail();
+
+        if (! $this->authorizePropertyAccess($property)) {
+            return $this->unauthorized('You do not have access to this property.');
+        }
+
         unset($data['property_uuid']);
         $data['property_id'] = $property->id;
 
@@ -63,11 +67,12 @@ class FacilityController extends Controller
         return $this->success(new FacilityResource($facility), 'Facility created successfully.', 201);
     }
 
-    /**
-     * Update a facility.
-     */
     public function update(Request $request, Facility $facility): JsonResponse
     {
+        if (! $this->authorizePropertyAccess($facility->property)) {
+            return $this->unauthorized('You do not have access to this facility.');
+        }
+
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
@@ -94,11 +99,23 @@ class FacilityController extends Controller
         return $this->success(new FacilityResource($facility), 'Facility updated successfully.');
     }
 
-    /**
-     * List blocked dates and time slots for a facility.
-     */
+    public function destroy(Facility $facility): JsonResponse
+    {
+        if (! $this->authorizePropertyAccess($facility->property)) {
+            return $this->unauthorized('You do not have access to this facility.');
+        }
+
+        $facility->delete();
+
+        return $this->success(message: 'Facility deleted successfully.');
+    }
+
     public function blockedSlots(Facility $facility): JsonResponse
     {
+        if (! $this->authorizePropertyAccess($facility->property)) {
+            return $this->unauthorized('You do not have access to this facility.');
+        }
+
         $slots = $facility->blockedSlots()
             ->orderByDesc('blocked_date')
             ->orderBy('start_time')
@@ -108,11 +125,12 @@ class FacilityController extends Controller
         return $this->success($slots);
     }
 
-    /**
-     * Block a full date or a specific time slot for a facility.
-     */
     public function storeBlockedSlot(Request $request, Facility $facility): JsonResponse
     {
+        if (! $this->authorizePropertyAccess($facility->property)) {
+            return $this->unauthorized('You do not have access to this facility.');
+        }
+
         $validated = $request->validate([
             'blocked_date' => ['required', 'date', 'after_or_equal:today'],
             'start_time' => ['nullable', 'required_with:end_time', 'date_format:H:i'],
@@ -125,11 +143,12 @@ class FacilityController extends Controller
         return $this->success($this->blockedSlotPayload($slot), 'Facility slot blocked successfully.', 201);
     }
 
-    /**
-     * Remove a blocked facility slot.
-     */
     public function destroyBlockedSlot(Facility $facility, FacilityBlockedSlot $blockedSlot): JsonResponse
     {
+        if (! $this->authorizePropertyAccess($facility->property)) {
+            return $this->unauthorized('You do not have access to this facility.');
+        }
+
         if ($blockedSlot->facility_id !== $facility->id) {
             return $this->notFound('Blocked slot not found.');
         }
@@ -139,11 +158,6 @@ class FacilityController extends Controller
         return $this->success(message: 'Blocked slot removed successfully.');
     }
 
-    /**
-     * Format a blocked slot response.
-     *
-     * @return array<string, mixed>
-     */
     private function blockedSlotPayload(FacilityBlockedSlot $slot): array
     {
         return [

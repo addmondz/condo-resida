@@ -7,11 +7,6 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class UserResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
         return [
@@ -23,6 +18,13 @@ class UserResource extends JsonResource
             'resident_type' => $this->resident_type?->value,
             'avatar' => $this->avatar,
             'roles' => $this->whenLoaded('roles', fn () => $this->roles->pluck('name')),
+            'property' => $this->when(
+                $this->property_id && $this->relationLoaded('managedProperty') && $this->managedProperty,
+                fn () => [
+                    'uuid' => $this->managedProperty->uuid,
+                    'name' => $this->managedProperty->name,
+                ]
+            ),
             'unit' => $this->when(
                 $this->relationLoaded('primaryUnit') && $this->primaryUnit,
                 function () {

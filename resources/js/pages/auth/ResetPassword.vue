@@ -1,75 +1,77 @@
 <template>
-    <div class="rounded-xl border border-gray-200 bg-white">
-        <div class="border-b border-gray-100 px-5 py-4">
-            <h2 class="text-base font-semibold text-gray-900">
-                Reset your password
-            </h2>
-            <p class="mt-0.5 text-sm text-gray-500">
+    <div class="animate-fade-in-up">
+        <div class="mb-8 hidden lg:block">
+            <h2 class="text-[22px] font-semibold tracking-tight text-zinc-900">Reset your password</h2>
+            <p class="mt-1.5 text-[14px] text-zinc-500">
                 Choose a new password for your account.
             </p>
         </div>
 
-        <div class="px-5 py-5">
-            <div
-                v-if="errorMessage"
-                class="mb-5 flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 px-5 py-4"
-            >
-                <svg
-                    class="mt-0.5 h-5 w-5 shrink-0 text-red-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke-width="1.5"
-                    stroke="currentColor"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
+        <div class="rounded-2xl border border-zinc-200/80 bg-white shadow-sm shadow-zinc-900/[0.04]">
+            <div class="p-6 sm:p-7">
+                <Transition name="page-fade">
+                    <div
+                        v-if="errorMessage"
+                        class="mb-6 flex items-start gap-3 rounded-xl border border-red-100 bg-red-50/80 px-4 py-3.5"
+                    >
+                        <svg
+                            class="mt-0.5 h-4 w-4 shrink-0 text-red-500"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="2"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
+                            />
+                        </svg>
+                        <p class="text-[13px] leading-snug text-red-700">{{ errorMessage }}</p>
+                    </div>
+                </Transition>
+
+                <form @submit.prevent="handleReset" class="space-y-5">
+                    <AppInput
+                        v-model="form.email"
+                        label="Email"
+                        type="email"
+                        :error="errors.email"
+                        disabled
                     />
-                </svg>
-                <p class="text-sm text-red-700">{{ errorMessage }}</p>
+
+                    <AppInput
+                        v-model="form.password"
+                        label="New password"
+                        type="password"
+                        placeholder="Enter new password"
+                        :error="errors.password"
+                        required
+                    />
+
+                    <AppInput
+                        v-model="form.password_confirmation"
+                        label="Confirm password"
+                        type="password"
+                        placeholder="Confirm new password"
+                        :error="errors.password_confirmation"
+                        required
+                    />
+
+                    <AppButton type="submit" :loading="loading" size="lg" class="!mt-7 w-full">
+                        Reset password
+                    </AppButton>
+                </form>
+
+                <p class="mt-7 text-center">
+                    <router-link
+                        :to="{ name: 'login' }"
+                        class="text-[13px] font-medium text-primary-600 transition-colors hover:text-primary-700"
+                    >
+                        Back to sign in
+                    </router-link>
+                </p>
             </div>
-
-            <form @submit.prevent="handleReset" class="space-y-5">
-                <AppInput
-                    v-model="form.email"
-                    label="Email"
-                    type="email"
-                    :error="errors.email"
-                    disabled
-                />
-
-                <AppInput
-                    v-model="form.password"
-                    label="New Password"
-                    type="password"
-                    placeholder="Enter new password"
-                    :error="errors.password"
-                    required
-                />
-
-                <AppInput
-                    v-model="form.password_confirmation"
-                    label="Confirm Password"
-                    type="password"
-                    placeholder="Confirm new password"
-                    :error="errors.password_confirmation"
-                    required
-                />
-
-                <AppButton type="submit" :loading="loading" class="w-full">
-                    Reset Password
-                </AppButton>
-            </form>
-
-            <p class="mt-6 text-center text-sm text-gray-500">
-                <router-link
-                    :to="{ name: 'login' }"
-                    class="font-medium text-primary-600 transition-colors hover:text-primary-500"
-                >
-                    Back to sign in
-                </router-link>
-            </p>
         </div>
     </div>
 </template>

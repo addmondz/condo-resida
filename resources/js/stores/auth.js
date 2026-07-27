@@ -13,9 +13,15 @@ export const useAuthStore = defineStore("auth", () => {
     const isPending = computed(() => user.value?.status === "pending");
     const isRejected = computed(() => user.value?.status === "rejected");
     const isSuspended = computed(() => user.value?.status === "suspended");
-    const needsOnboarding = computed(
-        () => user.value && !user.value.has_unit_assignment,
-    );
+    const needsOnboarding = computed(() => {
+        if (!user.value) return false;
+        const role =
+            typeof user.value.roles?.[0] === "string"
+                ? user.value.roles[0]
+                : user.value.roles?.[0]?.name;
+        if (role && role !== "resident") return false;
+        return !user.value.has_unit_assignment;
+    });
     const userRole = computed(() => {
         const role = user.value?.roles?.[0];
 
@@ -96,14 +102,14 @@ export const useAuthStore = defineStore("auth", () => {
     }
 
     function getHomePath() {
+        if (isAdmin.value) return "/admin/dashboard";
+        if (isGuard.value) return "/guard/dashboard";
         if (needsOnboarding.value) return "/onboarding";
         if (!isApproved.value) {
             if (isPending.value) return "/pending-approval";
             if (isRejected.value) return "/rejected";
             return "/login";
         }
-        if (isAdmin.value) return "/admin/dashboard";
-        if (isGuard.value) return "/guard/dashboard";
         return "/resident/dashboard";
     }
 

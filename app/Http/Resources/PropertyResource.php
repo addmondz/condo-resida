@@ -21,6 +21,9 @@ class PropertyResource extends JsonResource
             'contact_email' => $this->contact_email,
             'contact_phone' => $this->contact_phone,
             'timezone' => $this->timezone,
+            'status' => $this->status,
+            'blocks_count' => $this->whenCounted('blocks'),
+            'units_count' => $this->whenCounted('units'),
         ];
     }
 }

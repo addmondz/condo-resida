@@ -45,7 +45,7 @@
                     </svg>
                 </div>
                 <div class="min-w-0">
-                    <p class="text-lg font-bold text-gray-900">Resida</p>
+                    <p class="text-lg font-bold text-gray-900">Rumi</p>
                     <p class="text-xs font-medium text-primary-600">
                         Guard Portal
                     </p>

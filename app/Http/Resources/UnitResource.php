@@ -18,7 +18,16 @@ class UnitResource extends JsonResource
             'uuid' => $this->uuid,
             'name' => $this->name,
             'floor' => $this->floor,
+            'status' => $this->status,
             'block' => new BlockResource($this->whenLoaded('block')),
+            'residents' => $this->when(
+                $this->relationLoaded('residents'),
+                fn () => $this->residents->map(fn ($user) => [
+                    'uuid' => $user->uuid,
+                    'name' => $user->name,
+                    'resident_type' => $user->resident_type?->value,
+                ])
+            ),
         ];
     }
 }

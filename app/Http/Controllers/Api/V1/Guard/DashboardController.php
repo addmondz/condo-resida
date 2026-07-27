@@ -5,38 +5,44 @@ namespace App\Http\Controllers\Api\V1\Guard;
 use App\Enums\VisitorStatus;
 use App\Http\Controllers\ApiResponseTrait;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\ScopesToProperty;
 use App\Models\VisitorRegistration;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
 
 class DashboardController extends Controller
 {
     use ApiResponseTrait;
+    use ScopesToProperty;
 
     public function dashboard(): JsonResponse
     {
         $today = today();
+        $propertyId = $this->scopedPropertyId();
+
+        $base = fn () => $this->scopedQuery($propertyId);
 
         $stats = [
-            'today_expected' => VisitorRegistration::whereDate('visit_date', $today)
+            'today_expected' => $base()->whereDate('visit_date', $today)
                 ->where('status', VisitorStatus::Active)
                 ->count(),
-            'today_checked_in' => VisitorRegistration::whereDate('visit_date', $today)
+            'today_checked_in' => $base()->whereDate('visit_date', $today)
                 ->where('status', VisitorStatus::CheckedIn)
                 ->count(),
-            'today_checked_out' => VisitorRegistration::whereDate('visit_date', $today)
+            'today_checked_out' => $base()->whereDate('visit_date', $today)
                 ->where('status', VisitorStatus::CheckedOut)
                 ->count(),
-            'today_total' => VisitorRegistration::whereDate('visit_date', $today)->count(),
-            'visitors_daily' => $this->dailyCounts(7),
+            'today_total' => $base()->whereDate('visit_date', $today)->count(),
+            'visitors_daily' => $this->dailyCounts($propertyId, 7),
             'status_breakdown' => [
-                'active' => VisitorRegistration::whereDate('visit_date', $today)
+                'active' => $base()->whereDate('visit_date', $today)
                     ->where('status', VisitorStatus::Active)->count(),
-                'checked_in' => VisitorRegistration::whereDate('visit_date', $today)
+                'checked_in' => $base()->whereDate('visit_date', $today)
                     ->where('status', VisitorStatus::CheckedIn)->count(),
-                'checked_out' => VisitorRegistration::whereDate('visit_date', $today)
+                'checked_out' => $base()->whereDate('visit_date', $today)
                     ->where('status', VisitorStatus::CheckedOut)->count(),
-                'cancelled' => VisitorRegistration::whereDate('visit_date', $today)
+                'cancelled' => $base()->whereDate('visit_date', $today)
                     ->where('status', VisitorStatus::Cancelled)->count(),
             ],
         ];
@@ -44,10 +50,22 @@ class DashboardController extends Controller
         return $this->success($stats);
     }
 
-    private function dailyCounts(int $days): array
+    private function scopedQuery(?int $propertyId): Builder
+    {
+        $query = VisitorRegistration::query();
+        if ($propertyId !== null) {
+            $query->where('property_id', $propertyId);
+        }
+
+        return $query;
+    }
+
+    private function dailyCounts(?int $propertyId, int $days): array
     {
         $start = Carbon::today()->subDays($days - 1);
-        $counts = VisitorRegistration::whereDate('visit_date', '>=', $start)
+
+        $query = $this->scopedQuery($propertyId);
+        $counts = $query->whereDate('visit_date', '>=', $start)
             ->selectRaw('DATE(visit_date) as date, COUNT(*) as count')
             ->groupByRaw('DATE(visit_date)')
             ->pluck('count', 'date')

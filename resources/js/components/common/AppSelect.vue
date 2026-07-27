@@ -3,9 +3,9 @@
         <label
             v-if="label"
             :for="id"
-            class="mb-1.5 block text-sm font-medium text-gray-700"
+            class="mb-2 block text-[13px] font-medium text-zinc-700"
         >
-            {{ label }} <span v-if="required" class="text-red-500">*</span>
+            {{ label }}
         </label>
         <select
             :id="id"
@@ -13,12 +13,13 @@
             :disabled="disabled"
             :required="required"
             :class="[
-                'block w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm transition-colors',
-                'focus:outline-none focus:ring-2 focus:border-primary-400 focus:ring-primary-100',
-                'disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed',
+                'block w-full rounded-[10px] border bg-white px-3.5 py-2.5 text-[14px] text-zinc-900 shadow-sm shadow-zinc-900/[0.04] transition-all duration-200',
+                'hover:border-zinc-300',
+                'focus:border-primary-500 focus:outline-none focus:ring-[3px] focus:ring-primary-500/[0.08]',
+                'disabled:bg-zinc-50 disabled:text-zinc-400 disabled:cursor-not-allowed disabled:shadow-none',
                 error
-                    ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
-                    : 'border-gray-300 text-gray-900',
+                    ? 'border-red-300 focus:border-red-400 focus:ring-red-500/[0.08]'
+                    : 'border-zinc-200',
             ]"
             @change="$emit('update:modelValue', $event.target.value)"
         >
@@ -33,7 +34,7 @@
                 {{ opt.label }}
             </option>
         </select>
-        <p v-if="error" class="mt-1.5 text-sm text-red-600">{{ error }}</p>
+        <p v-if="error" class="mt-1.5 text-[12px] text-red-500">{{ error }}</p>
     </div>
 </template>
 

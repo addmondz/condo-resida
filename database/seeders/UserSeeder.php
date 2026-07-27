@@ -40,6 +40,7 @@ class UserSeeder extends Seeder
             'email' => 'admin@example.com',
             'password' => 'password',
             'status' => UserStatus::Approved,
+            'property_id' => $property->id,
             'email_verified_at' => now(),
         ]);
         $propertyAdmin->assignRole('property_admin');
@@ -50,6 +51,7 @@ class UserSeeder extends Seeder
             'email' => 'guard@example.com',
             'password' => 'password',
             'status' => UserStatus::Approved,
+            'property_id' => $property->id,
             'email_verified_at' => now(),
         ]);
         $guard->assignRole('guard');

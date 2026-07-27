@@ -42,7 +42,7 @@
                     </svg>
                 </div>
                 <div class="min-w-0">
-                    <p class="text-lg font-bold text-gray-900">Resida</p>
+                    <p class="text-lg font-bold text-gray-900">Rumi</p>
                     <p class="text-xs font-medium text-primary-600">
                         Admin Portal
                     </p>
@@ -61,6 +61,13 @@
                         icon="dashboard"
                         @click="sidebarOpen = false"
                         >Dashboard</SidebarLink
+                    >
+                    <SidebarLink
+                        v-if="auth.isSuperAdmin"
+                        :to="{ name: 'admin.properties' }"
+                        icon="properties"
+                        @click="sidebarOpen = false"
+                        >Properties</SidebarLink
                     >
                     <SidebarLink
                         :to="{ name: 'admin.users' }"

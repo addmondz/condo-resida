@@ -23,6 +23,24 @@ class AppNotificationResource extends JsonResource
             'status' => $this->status,
             'published_at' => $this->published_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
+            'creator' => $this->when(
+                $this->relationLoaded('creator') && $this->creator,
+                fn () => [
+                    'uuid' => $this->creator->uuid,
+                    'name' => $this->creator->name,
+                ]
+            ),
+            'property' => $this->when(
+                $this->relationLoaded('property') && $this->property,
+                fn () => [
+                    'uuid' => $this->property->uuid,
+                    'name' => $this->property->name,
+                ]
+            ),
+            'recipients_count' => $this->when(
+                $this->relationLoaded('recipients'),
+                fn () => $this->recipients->count()
+            ),
             'read_at' => $this->when(
                 $this->relationLoaded('recipients') || isset($this->pivot),
                 fn () => $this->pivot?->read_at?->toIso8601String()

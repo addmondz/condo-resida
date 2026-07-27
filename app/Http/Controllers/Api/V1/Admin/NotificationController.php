@@ -6,6 +6,7 @@ use App\Enums\NotificationTargetType;
 use App\Enums\UserStatus;
 use App\Http\Controllers\ApiResponseTrait;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\ScopesToProperty;
 use App\Http\Requests\Admin\StoreNotificationRequest;
 use App\Http\Resources\AppNotificationResource;
 use App\Models\AppNotification;
@@ -20,13 +21,13 @@ use Illuminate\Support\Facades\DB;
 class NotificationController extends Controller
 {
     use ApiResponseTrait;
+    use ScopesToProperty;
 
-    /**
-     * List all notifications.
-     */
     public function index(Request $request): JsonResponse
     {
         $query = AppNotification::with('creator')->orderByDesc('created_at');
+
+        $this->applyPropertyScope($query);
 
         if ($request->filled('type')) {
             $query->where('type', $request->input('type'));
@@ -37,14 +38,25 @@ class NotificationController extends Controller
         return $this->success(AppNotificationResource::collection($notifications)->response()->getData(true));
     }
 
-    /**
-     * Create a new notification and dispatch it to recipients.
-     */
+    public function show(AppNotification $notification): JsonResponse
+    {
+        $notification->load(['creator', 'property', 'recipients.user']);
+
+        return $this->success(new AppNotificationResource($notification));
+    }
+
     public function store(StoreNotificationRequest $request): JsonResponse
     {
         $data = $request->validated();
         $target = $this->resolveTarget($data);
         $status = $data['status'] ?? 'published';
+
+        if (! $this->isSuperAdmin() && $target['property_id'] !== null) {
+            $propertyId = $this->scopedPropertyId();
+            if ($propertyId !== null && $target['property_id'] !== $propertyId) {
+                return $this->unauthorized('You can only create notifications for your property.');
+            }
+        }
 
         $notification = DB::transaction(function () use ($data, $target, $status): AppNotification {
             $notification = AppNotification::create([
@@ -73,9 +85,6 @@ class NotificationController extends Controller
         );
     }
 
-    /**
-     * Publish a draft notification.
-     */
     public function publish(AppNotification $notification): JsonResponse
     {
         if ($notification->status === 'archived') {
@@ -98,9 +107,6 @@ class NotificationController extends Controller
         return $this->success(new AppNotificationResource($notification->fresh()), 'Notification published.');
     }
 
-    /**
-     * Archive a notification.
-     */
     public function archive(AppNotification $notification): JsonResponse
     {
         $notification->update(['status' => 'archived']);
@@ -108,11 +114,6 @@ class NotificationController extends Controller
         return $this->success(new AppNotificationResource($notification->fresh()), 'Notification archived.');
     }
 
-    /**
-     * Resolve UUID based targeting into internal IDs.
-     *
-     * @return array{target_id: int|null, property_id: int|null, resident_ids: array<int>|null}
-     */
     private function resolveTarget(array $data): array
     {
         $targetType = NotificationTargetType::from($data['target_type']);
@@ -133,9 +134,6 @@ class NotificationController extends Controller
         };
     }
 
-    /**
-     * @return array{target_id: int|null, property_id: int|null, resident_ids: null}
-     */
     private function resolvePropertyTarget(array $data): array
     {
         $property = isset($data['property_uuid'])
@@ -149,9 +147,6 @@ class NotificationController extends Controller
         ];
     }
 
-    /**
-     * @return array{target_id: int|null, property_id: int|null, resident_ids: null}
-     */
     private function resolveBlockTarget(array $data): array
     {
         $block = isset($data['block_uuid'])
@@ -165,9 +160,6 @@ class NotificationController extends Controller
         ];
     }
 
-    /**
-     * Dispatch notification recipients for a published notification.
-     */
     private function dispatchNotification(AppNotification $notification, array $data, array $target): void
     {
         $recipientQuery = User::query()

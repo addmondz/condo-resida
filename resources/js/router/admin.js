@@ -23,6 +23,11 @@ export default [
                 component: () => import("@/pages/admin/users/Index.vue"),
             },
             {
+                path: "users/create",
+                name: "admin.users.create",
+                component: () => import("@/pages/admin/users/Create.vue"),
+            },
+            {
                 path: "users/:uuid",
                 name: "admin.users.show",
                 component: () => import("@/pages/admin/users/Show.vue"),
@@ -48,6 +53,12 @@ export default [
                 path: "facilities/create",
                 name: "admin.facilities.create",
                 component: () => import("@/pages/admin/facilities/Create.vue"),
+            },
+            {
+                path: "facilities/:uuid",
+                name: "admin.facilities.show",
+                component: () => import("@/pages/admin/facilities/Show.vue"),
+                props: true,
             },
             {
                 path: "facilities/:uuid/edit",
@@ -77,6 +88,39 @@ export default [
                 name: "admin.notifications.create",
                 component: () =>
                     import("@/pages/admin/notifications/Create.vue"),
+            },
+            {
+                path: "notifications/:uuid",
+                name: "admin.notifications.show",
+                component: () =>
+                    import("@/pages/admin/notifications/Show.vue"),
+                props: true,
+            },
+            {
+                path: "properties",
+                name: "admin.properties",
+                component: () =>
+                    import("@/pages/admin/properties/Index.vue"),
+            },
+            {
+                path: "properties/create",
+                name: "admin.properties.create",
+                component: () =>
+                    import("@/pages/admin/properties/Create.vue"),
+            },
+            {
+                path: "properties/:uuid",
+                name: "admin.properties.show",
+                component: () =>
+                    import("@/pages/admin/properties/Show.vue"),
+                props: true,
+            },
+            {
+                path: "properties/:uuid/edit",
+                name: "admin.properties.edit",
+                component: () =>
+                    import("@/pages/admin/properties/Edit.vue"),
+                props: true,
             },
             {
                 path: "settings",

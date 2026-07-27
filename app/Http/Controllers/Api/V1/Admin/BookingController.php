@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\ApiResponseTrait;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\ScopesToProperty;
 use App\Http\Requests\Admin\RejectBookingRequest;
 use App\Http\Resources\FacilityBookingResource;
 use App\Models\FacilityBooking;
@@ -15,17 +16,20 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class BookingController extends Controller
 {
     use ApiResponseTrait;
+    use ScopesToProperty;
 
     public function __construct(
         protected FacilityService $facilityService
     ) {}
 
-    /**
-     * List all bookings with filters and pagination.
-     */
     public function index(Request $request): JsonResponse
     {
         $query = FacilityBooking::with(['facility.property', 'resident', 'approvedBy']);
+
+        $propertyId = $this->scopedPropertyId();
+        if ($propertyId !== null) {
+            $query->whereHas('facility', fn ($q) => $q->where('property_id', $propertyId));
+        }
 
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
@@ -54,9 +58,6 @@ class BookingController extends Controller
         return $this->success(FacilityBookingResource::collection($bookings)->response()->getData(true));
     }
 
-    /**
-     * Show a specific booking.
-     */
     public function show(FacilityBooking $booking): JsonResponse
     {
         $booking->load(['facility.property', 'resident', 'approvedBy', 'cancelledBy']);
@@ -64,9 +65,6 @@ class BookingController extends Controller
         return $this->success(new FacilityBookingResource($booking));
     }
 
-    /**
-     * Approve a booking.
-     */
     public function approve(FacilityBooking $booking): JsonResponse
     {
         $booking = $this->facilityService->approveBooking($booking, auth()->user());
@@ -77,9 +75,6 @@ class BookingController extends Controller
         );
     }
 
-    /**
-     * Reject a booking.
-     */
     public function reject(RejectBookingRequest $request, FacilityBooking $booking): JsonResponse
     {
         $booking = $this->facilityService->rejectBooking(
@@ -94,9 +89,6 @@ class BookingController extends Controller
         );
     }
 
-    /**
-     * Cancel a booking.
-     */
     public function cancel(FacilityBooking $booking): JsonResponse
     {
         $booking = $this->facilityService->cancelBooking($booking, auth()->user());
@@ -107,12 +99,14 @@ class BookingController extends Controller
         );
     }
 
-    /**
-     * Export bookings as CSV.
-     */
     public function export(Request $request): StreamedResponse
     {
         $query = FacilityBooking::with(['facility', 'resident']);
+
+        $propertyId = $this->scopedPropertyId();
+        if ($propertyId !== null) {
+            $query->whereHas('facility', fn ($q) => $q->where('property_id', $propertyId));
+        }
 
         if ($request->filled('from_date')) {
             $query->whereDate('booking_date', '>=', $request->input('from_date'));

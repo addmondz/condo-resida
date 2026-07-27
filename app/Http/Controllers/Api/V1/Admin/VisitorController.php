@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\ApiResponseTrait;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\ScopesToProperty;
 use App\Http\Requests\Admin\CancelVisitorRequest;
 use App\Http\Resources\VisitorRegistrationResource;
 use App\Models\VisitorRegistration;
@@ -15,17 +16,17 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class VisitorController extends Controller
 {
     use ApiResponseTrait;
+    use ScopesToProperty;
 
     public function __construct(
         protected VisitorService $visitorService
     ) {}
 
-    /**
-     * List all visitor registrations with filters and pagination.
-     */
     public function index(Request $request): JsonResponse
     {
         $query = VisitorRegistration::with(['resident', 'property', 'block', 'unit', 'checkedInBy', 'checkedOutBy']);
+
+        $this->applyPropertyScope($query);
 
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
@@ -63,9 +64,6 @@ class VisitorController extends Controller
         return $this->success(VisitorRegistrationResource::collection($visitors)->response()->getData(true));
     }
 
-    /**
-     * Show a specific visitor registration.
-     */
     public function show(VisitorRegistration $visitor): JsonResponse
     {
         $visitor->load([
@@ -82,9 +80,6 @@ class VisitorController extends Controller
         return $this->success(new VisitorRegistrationResource($visitor));
     }
 
-    /**
-     * Cancel a visitor registration.
-     */
     public function cancel(CancelVisitorRequest $request, VisitorRegistration $visitor): JsonResponse
     {
         $visitor = $this->visitorService->cancelVisitor(
@@ -101,12 +96,11 @@ class VisitorController extends Controller
         );
     }
 
-    /**
-     * Export visitor registrations as CSV.
-     */
     public function export(Request $request): StreamedResponse
     {
         $query = VisitorRegistration::with(['resident', 'property', 'block', 'unit']);
+
+        $this->applyPropertyScope($query);
 
         if ($request->filled('from_date')) {
             $query->whereDate('visit_date', '>=', $request->input('from_date'));

@@ -69,7 +69,7 @@ class AuthController extends Controller
     public function me(): JsonResponse
     {
         $user = auth()->user();
-        $user->load(['roles', 'primaryUnit.unit.block.property']);
+        $user->load(['roles', 'managedProperty', 'primaryUnit.unit.block.property']);
 
         return $this->success(new UserResource($user));
     }

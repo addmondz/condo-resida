@@ -6,6 +6,10 @@ export default {
     },
 
     // Users
+    createUser(data) {
+        return client.post("/admin/users", data);
+    },
+
     getUsers(params = {}) {
         return client.get("/admin/users", { params });
     },
@@ -79,6 +83,10 @@ export default {
         });
     },
 
+    deleteFacility(uuid) {
+        return client.delete(`/admin/facilities/${uuid}`);
+    },
+
     getFacilityBlockedSlots(uuid) {
         return client.get(`/admin/facilities/${uuid}/blocked-slots`);
     },
@@ -126,6 +134,10 @@ export default {
         return client.get("/admin/notifications", { params });
     },
 
+    getNotification(uuid) {
+        return client.get(`/admin/notifications/${uuid}`);
+    },
+
     createNotification(data) {
         return client.post("/admin/notifications", data);
     },
@@ -139,16 +151,62 @@ export default {
     },
 
     // Properties
-    getProperties() {
-        return client.get("/admin/properties");
+    getProperties(params = {}) {
+        return client.get("/admin/properties", { params });
     },
 
-    getBlocks(propertyUuid) {
-        return client.get(`/admin/properties/${propertyUuid}/blocks`);
+    getProperty(uuid) {
+        return client.get(`/admin/properties/${uuid}`);
     },
 
-    getUnits(blockUuid) {
-        return client.get(`/admin/blocks/${blockUuid}/units`);
+    createProperty(data) {
+        return client.post("/admin/properties", data);
+    },
+
+    updateProperty(uuid, data) {
+        return client.put(`/admin/properties/${uuid}`, data);
+    },
+
+    deleteProperty(uuid) {
+        return client.delete(`/admin/properties/${uuid}`);
+    },
+
+    // Blocks
+    getBlocks(propertyUuid, params = {}) {
+        return client.get(`/admin/properties/${propertyUuid}/blocks`, { params });
+    },
+
+    getBlock(propertyUuid, blockUuid) {
+        return client.get(`/admin/properties/${propertyUuid}/blocks/${blockUuid}`);
+    },
+
+    createBlock(propertyUuid, data) {
+        return client.post(`/admin/properties/${propertyUuid}/blocks`, data);
+    },
+
+    updateBlock(propertyUuid, blockUuid, data) {
+        return client.put(`/admin/properties/${propertyUuid}/blocks/${blockUuid}`, data);
+    },
+
+    deleteBlock(propertyUuid, blockUuid) {
+        return client.delete(`/admin/properties/${propertyUuid}/blocks/${blockUuid}`);
+    },
+
+    // Units
+    getUnits(blockUuid, params = {}) {
+        return client.get(`/admin/blocks/${blockUuid}/units`, { params });
+    },
+
+    createUnit(blockUuid, data) {
+        return client.post(`/admin/blocks/${blockUuid}/units`, data);
+    },
+
+    updateUnit(blockUuid, unitUuid, data) {
+        return client.put(`/admin/blocks/${blockUuid}/units/${unitUuid}`, data);
+    },
+
+    deleteUnit(blockUuid, unitUuid) {
+        return client.delete(`/admin/blocks/${blockUuid}/units/${unitUuid}`);
     },
 
     // Settings

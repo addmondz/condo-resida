@@ -4,7 +4,16 @@
             title="User Management"
             subtitle="Manage all registered users."
             :breadcrumbs="[{ label: 'Users' }]"
-        />
+        >
+            <template v-if="auth.isSuperAdmin" #actions>
+                <AppButton :to="{ name: 'admin.users.create' }">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    Add User
+                </AppButton>
+            </template>
+        </PageHeader>
 
         <!-- Search & Filters -->
         <div class="mb-4">
@@ -256,6 +265,7 @@
 <script setup>
 import { ref, watch, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
 import adminApi from "@/api/admin";
 import PageHeader from "@/components/common/PageHeader.vue";
 import AppSelect from "@/components/common/AppSelect.vue";
@@ -271,6 +281,7 @@ import { useToast } from "@/composables/useToast";
 
 const router = useRouter();
 const route = useRoute();
+const auth = useAuthStore();
 const toast = useToast();
 
 const statusTabs = [

@@ -7,6 +7,7 @@ use App\Enums\UserStatus;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -37,6 +38,7 @@ class User extends Authenticatable
         'phone',
         'password',
         'status',
+        'property_id',
         'resident_type',
         'avatar',
     ];
@@ -92,6 +94,14 @@ class User extends Authenticatable
     // ---------------------------------------------------------------
     // Relationships
     // ---------------------------------------------------------------
+
+    /**
+     * The property this admin/guard user manages.
+     */
+    public function managedProperty(): BelongsTo
+    {
+        return $this->belongsTo(Property::class, 'property_id');
+    }
 
     /**
      * Unit assignments for this user.

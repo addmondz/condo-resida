@@ -1,33 +1,35 @@
 <template>
-    <div>
+    <div class="animate-fade-in-up">
         <div class="mb-8 hidden lg:block">
-            <h2 class="text-2xl font-bold text-gray-900">Create an account</h2>
-            <p class="mt-1 text-sm text-gray-500">
-                Get started with Resida in seconds
+            <h2 class="text-[22px] font-semibold tracking-tight text-zinc-900">Create an account</h2>
+            <p class="mt-1.5 text-[14px] text-zinc-500">
+                Get started with Rumi in seconds
             </p>
         </div>
 
-        <div class="rounded-xl border border-gray-200 bg-white">
-            <div class="px-5 py-5 sm:px-6 sm:py-6">
-                <div
-                    v-if="errorMessage"
-                    class="mb-5 flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 px-5 py-4"
-                >
-                    <svg
-                        class="mt-0.5 h-5 w-5 shrink-0 text-red-500"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke-width="1.5"
-                        stroke="currentColor"
+        <div class="rounded-2xl border border-zinc-200/80 bg-white shadow-sm shadow-zinc-900/[0.04]">
+            <div class="p-6 sm:p-7">
+                <Transition name="page-fade">
+                    <div
+                        v-if="errorMessage"
+                        class="mb-6 flex items-start gap-3 rounded-xl border border-red-100 bg-red-50/80 px-4 py-3.5"
                     >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
-                        />
-                    </svg>
-                    <p class="text-sm text-red-700">{{ errorMessage }}</p>
-                </div>
+                        <svg
+                            class="mt-0.5 h-4 w-4 shrink-0 text-red-500"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="2"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
+                            />
+                        </svg>
+                        <p class="text-[13px] leading-snug text-red-700">{{ errorMessage }}</p>
+                    </div>
+                </Transition>
 
                 <form @submit.prevent="handleRegister" class="space-y-5">
                     <AppInput
@@ -40,9 +42,9 @@
 
                     <AppInput
                         v-model="form.email"
-                        label="Email address"
+                        label="Email"
                         type="email"
-                        placeholder="you@example.com"
+                        placeholder="name@company.com"
                         :error="errors.email"
                         required
                     />
@@ -74,25 +76,24 @@
                         required
                     />
 
-                    <AppButton type="submit" :loading="loading" class="w-full">
+                    <AppButton type="submit" :loading="loading" size="lg" class="!mt-7 w-full">
                         Create account
                     </AppButton>
                 </form>
 
-                <div class="relative my-6">
+                <!-- Divider -->
+                <div class="relative my-7">
                     <div class="absolute inset-0 flex items-center">
-                        <div class="w-full border-t border-gray-200"></div>
+                        <div class="w-full border-t border-zinc-100"></div>
                     </div>
-                    <div class="relative flex justify-center text-sm">
-                        <span class="bg-white px-3 text-gray-400"
-                            >Already have an account?</span
-                        >
+                    <div class="relative flex justify-center text-[12px]">
+                        <span class="bg-white px-3 text-zinc-400">Already have an account?</span>
                     </div>
                 </div>
 
                 <router-link
                     :to="{ name: 'login' }"
-                    class="flex w-full items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-all hover:bg-gray-50 active:scale-[0.98]"
+                    class="flex w-full items-center justify-center rounded-[10px] border border-zinc-200 bg-white px-4 py-2.5 text-[13px] font-medium text-zinc-700 shadow-sm shadow-zinc-900/[0.04] transition-all duration-200 hover:border-zinc-300 hover:bg-zinc-50 active:scale-[0.98]"
                 >
                     Sign in instead
                 </router-link>

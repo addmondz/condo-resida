@@ -17,7 +17,10 @@ class BlockResource extends JsonResource
         return [
             'uuid' => $this->uuid,
             'name' => $this->name,
+            'status' => $this->status,
+            'units_count' => $this->whenCounted('units'),
             'property' => new PropertyResource($this->whenLoaded('property')),
+            'units' => UnitResource::collection($this->whenLoaded('units')),
         ];
     }
 }
