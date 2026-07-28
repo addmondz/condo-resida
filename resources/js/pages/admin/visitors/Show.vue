@@ -51,7 +51,7 @@
             <div class="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
                 <aside class="order-1 lg:sticky lg:top-6 lg:self-start">
                     <div
-                        v-if="qrToken && visitor.status === 'Active'"
+                        v-if="qrToken"
                         ref="qrCardRef"
                         class="overflow-hidden rounded-xl border border-gray-200 bg-white"
                     >
@@ -65,7 +65,7 @@
                                         {{ visitor.visitor_name || "Visitor" }}
                                     </p>
                                 </div>
-                                <StatusBadge status="active" label="Ready" />
+                                <StatusBadge :status="visitor.status" />
                             </div>
                             <p class="mt-3 text-sm text-gray-300">
                                 Present this pass at the guard house.
@@ -171,7 +171,7 @@
                             QR unavailable
                         </h2>
                         <p class="mt-1 text-sm text-gray-500">
-                            QR codes are only shown for active visitor passes.
+                            This visitor pass does not have a QR token.
                         </p>
                     </div>
                 </aside>
@@ -582,7 +582,7 @@ onMounted(async () => {
         const { data } = await adminApi.getVisitor(props.uuid);
         visitor.value = data.data;
 
-        if (!qrToken.value && visitor.value.status === "Active") {
+        if (!qrToken.value) {
             try {
                 const qrResponse = await adminApi.getVisitorQr(props.uuid);
                 qrToken.value = qrResponse.data.data.qr_token;
