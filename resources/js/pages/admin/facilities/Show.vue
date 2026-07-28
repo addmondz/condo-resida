@@ -9,15 +9,7 @@
             ]"
         >
             <template #actions>
-                <div class="flex items-center gap-2">
-                    <AppButton variant="secondary" size="sm" :to="{ name: 'admin.facilities.edit', params: { uuid } }">Edit</AppButton>
-                    <AppButton variant="secondary" :to="{ name: 'admin.facilities' }" size="sm">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-                        </svg>
-                        Back
-                    </AppButton>
-                </div>
+                <AppButton variant="secondary" size="sm" :to="{ name: 'admin.facilities.edit', params: { uuid } }">Edit</AppButton>
             </template>
         </PageHeader>
 

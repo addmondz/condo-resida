@@ -7,16 +7,7 @@
                 { label: 'Notifications', to: { name: 'admin.notifications' } },
                 { label: notification.title || 'Details' },
             ]"
-        >
-            <template #actions>
-                <AppButton variant="secondary" :to="{ name: 'admin.notifications' }" size="sm">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-                    </svg>
-                    Back
-                </AppButton>
-            </template>
-        </PageHeader>
+        />
 
         <SkeletonLoader v-if="loading" variant="form" :rows="5" container-class="rounded-xl border border-gray-200 bg-white px-5 py-5" />
 
@@ -72,9 +63,33 @@
 
             <!-- Actions -->
             <div class="flex flex-col gap-3 sm:flex-row">
-                <AppButton v-if="notification.status === 'draft'" @click="publish" :loading="publishing">Publish</AppButton>
-                <AppButton v-if="notification.status !== 'archived'" variant="secondary" @click="archive" :loading="archiving">Archive</AppButton>
+                <AppButton v-if="notification.status === 'draft'" @click="showPublishDialog = true">Publish</AppButton>
+                <AppButton v-if="notification.status !== 'archived'" variant="secondary" @click="showArchiveDialog = true">Archive</AppButton>
             </div>
+
+            <!-- Publish Confirmation -->
+            <ConfirmationDialog
+                :show="showPublishDialog"
+                title="Publish Notification"
+                :message="`Are you sure you want to publish '${notification.title}'? It will be sent to all targeted recipients.`"
+                confirm-label="Publish"
+                confirm-variant="primary"
+                :loading="publishing"
+                @confirm="publish"
+                @cancel="showPublishDialog = false"
+            />
+
+            <!-- Archive Confirmation -->
+            <ConfirmationDialog
+                :show="showArchiveDialog"
+                title="Archive Notification"
+                :message="`Are you sure you want to archive '${notification.title}'?`"
+                confirm-label="Archive"
+                confirm-variant="danger"
+                :loading="archiving"
+                @confirm="archive"
+                @cancel="showArchiveDialog = false"
+            />
         </template>
     </div>
 </template>
@@ -84,6 +99,7 @@ import { ref, onMounted } from "vue";
 import adminApi from "@/api/admin";
 import PageHeader from "@/components/common/PageHeader.vue";
 import AppButton from "@/components/common/AppButton.vue";
+import ConfirmationDialog from "@/components/common/ConfirmationDialog.vue";
 import StatusBadge from "@/components/common/StatusBadge.vue";
 import SkeletonLoader from "@/components/common/SkeletonLoader.vue";
 import { useToast } from "@/composables/useToast";
@@ -96,6 +112,8 @@ const loading = ref(true);
 const error = ref("");
 const publishing = ref(false);
 const archiving = ref(false);
+const showPublishDialog = ref(false);
+const showArchiveDialog = ref(false);
 
 function formatDateTime(dateStr) {
     if (!dateStr) return "-";
@@ -121,6 +139,7 @@ async function publish() {
     try {
         const { data } = await adminApi.publishNotification(props.uuid);
         notification.value = data.data;
+        showPublishDialog.value = false;
         toast.success("Notification published.");
     } catch (err) {
         toast.error(err.response?.data?.message || "Failed to publish.");
@@ -134,6 +153,7 @@ async function archive() {
     try {
         const { data } = await adminApi.archiveNotification(props.uuid);
         notification.value = data.data;
+        showArchiveDialog.value = false;
         toast.success("Notification archived.");
     } catch (err) {
         toast.error(err.response?.data?.message || "Failed to archive.");

@@ -104,7 +104,7 @@
                                     :disabled="!slot.available"
                                     @click="selectSlot(slot)"
                                     :class="[
-                                        'rounded-xl border px-3 py-2.5 text-sm font-medium transition-all text-center',
+                                        'rounded-xl border px-3 py-2.5 text-[13px] font-medium leading-5 transition-all text-center',
                                         selectedSlot?.start_time ===
                                         slot.start_time
                                             ? 'border-primary-600 bg-primary-50 text-primary-700 ring-2 ring-primary-600'

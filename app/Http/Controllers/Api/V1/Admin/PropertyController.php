@@ -29,7 +29,22 @@ class PropertyController extends Controller
             });
         }
 
-        $properties = $query->orderBy('name')->paginate($request->integer('per_page', 15));
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        $sort = $request->input('sort', 'name');
+        $direction = $request->input('direction') === 'desc' ? 'desc' : 'asc';
+        $allowedSorts = ['name', 'address', 'status', 'blocks_count', 'units_count'];
+
+        if (! in_array($sort, $allowedSorts, true)) {
+            $sort = 'name';
+        }
+
+        $properties = $query
+            ->orderBy($sort, $direction)
+            ->orderBy('name')
+            ->paginate($request->integer('per_page', 10));
 
         return $this->success(PropertyResource::collection($properties)->response()->getData(true));
     }

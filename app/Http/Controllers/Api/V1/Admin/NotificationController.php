@@ -25,7 +25,7 @@ class NotificationController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = AppNotification::with('creator')->orderByDesc('created_at');
+        $query = AppNotification::with('creator');
 
         $this->applyPropertyScope($query);
 
@@ -33,7 +33,16 @@ class NotificationController extends Controller
             $query->where('type', $request->input('type'));
         }
 
-        $notifications = $query->paginate($request->integer('per_page', 15));
+        $sort = $request->input('sort', 'created_at');
+        $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+        $allowedSorts = ['title', 'type', 'target_type', 'status', 'published_at', 'created_at'];
+
+        if (! in_array($sort, $allowedSorts, true)) {
+            $sort = 'created_at';
+        }
+
+        $notifications = $query->orderBy($sort, $direction)
+            ->paginate($request->integer('per_page', 10));
 
         return $this->success(AppNotificationResource::collection($notifications)->response()->getData(true));
     }

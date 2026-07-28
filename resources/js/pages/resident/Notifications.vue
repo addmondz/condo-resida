@@ -54,7 +54,24 @@
                 ]"
                 @click="markRead(n)"
             >
-                <div class="flex items-start justify-between gap-3 px-5 py-3.5">
+                <div class="flex items-start gap-3 px-5 py-3.5">
+                    <div
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-600"
+                    >
+                        <svg
+                            class="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="1.5"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"
+                            />
+                        </svg>
+                    </div>
                     <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2">
                             <span
@@ -72,7 +89,7 @@
                         </p>
                     </div>
                     <span
-                        class="text-xs text-gray-400 whitespace-nowrap shrink-0"
+                        class="text-xs text-gray-400 whitespace-nowrap shrink-0 pt-0.5"
                         >{{ formatTimeAgo(n.published_at) }}</span
                     >
                 </div>
@@ -120,7 +137,7 @@ async function loadNotifications(page = 1) {
     try {
         const { data } = await residentApi.getNotifications({
             page,
-            per_page: 15,
+            per_page: 10,
         });
         notifications.value = data.data.data;
         meta.value = data.data.meta;

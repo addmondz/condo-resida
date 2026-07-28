@@ -7,30 +7,7 @@
                 { label: 'Bookings', to: { name: 'admin.bookings' } },
                 { label: booking.facility?.name || 'Details' },
             ]"
-        >
-            <template #actions>
-                <AppButton
-                    variant="secondary"
-                    :to="{ name: 'admin.bookings' }"
-                    size="sm"
-                >
-                    <svg
-                        class="h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke-width="1.5"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
-                        />
-                    </svg>
-                    Back to Bookings
-                </AppButton>
-            </template>
-        </PageHeader>
+        />
 
         <SkeletonLoader
             v-if="loading"
@@ -128,8 +105,7 @@
             <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <AppButton
                     v-if="booking.status === 'Pending'"
-                    @click="approve"
-                    :loading="approving"
+                    @click="showApproveDialog = true"
                     >Approve</AppButton
                 >
                 <AppButton
@@ -141,11 +117,34 @@
                 <AppButton
                     v-if="['Pending', 'Approved'].includes(booking.status)"
                     variant="secondary"
-                    @click="cancel"
-                    :loading="cancelling"
+                    @click="showCancelDialog = true"
                     >Cancel Booking</AppButton
                 >
             </div>
+
+            <!-- Approve Confirmation -->
+            <ConfirmationDialog
+                :show="showApproveDialog"
+                title="Approve Booking"
+                :message="`Are you sure you want to approve this booking for ${booking.facility?.name || 'this facility'}?`"
+                confirm-label="Approve"
+                confirm-variant="primary"
+                :loading="approving"
+                @confirm="approve"
+                @cancel="showApproveDialog = false"
+            />
+
+            <!-- Cancel Confirmation -->
+            <ConfirmationDialog
+                :show="showCancelDialog"
+                title="Cancel Booking"
+                message="Are you sure you want to cancel this booking? This action cannot be undone."
+                confirm-label="Cancel Booking"
+                confirm-variant="danger"
+                :loading="cancelling"
+                @confirm="cancelBooking"
+                @cancel="showCancelDialog = false"
+            />
 
             <AppModal
                 :show="showRejectDialog"
@@ -168,11 +167,23 @@
                     <AppButton
                         variant="danger"
                         :loading="rejecting"
-                        @click="reject"
+                        @click="requestRejectConfirmation"
                         >Reject</AppButton
                     >
                 </template>
             </AppModal>
+
+            <!-- Reject Confirmation -->
+            <ConfirmationDialog
+                :show="showRejectConfirmDialog"
+                title="Confirm Rejection"
+                :message="`Are you sure you want to reject this booking for ${booking.facility?.name || 'this facility'}?`"
+                confirm-label="Reject"
+                confirm-variant="danger"
+                :loading="rejecting"
+                @confirm="reject"
+                @cancel="cancelRejectConfirmation"
+            />
         </template>
     </div>
 </template>
@@ -183,6 +194,7 @@ import adminApi from "@/api/admin";
 import AppButton from "@/components/common/AppButton.vue";
 import AppModal from "@/components/common/AppModal.vue";
 import AppTextarea from "@/components/common/AppTextarea.vue";
+import ConfirmationDialog from "@/components/common/ConfirmationDialog.vue";
 import StatusBadge from "@/components/common/StatusBadge.vue";
 import PageHeader from "@/components/common/PageHeader.vue";
 import SkeletonLoader from "@/components/common/SkeletonLoader.vue";
@@ -200,8 +212,11 @@ const toast = useToast();
 const approving = ref(false);
 const rejecting = ref(false);
 const cancelling = ref(false);
+const showApproveDialog = ref(false);
 const showRejectDialog = ref(false);
+const showRejectConfirmDialog = ref(false);
 const rejectReason = ref("");
+const showCancelDialog = ref(false);
 
 function formatDateTime(dateStr) {
     if (!dateStr) return "-";
@@ -219,6 +234,7 @@ async function approve() {
     try {
         const { data } = await adminApi.approveBooking(props.uuid);
         booking.value = data.data;
+        showApproveDialog.value = false;
         toast.success("Booking approved.");
     } catch (err) {
         toast.error(err.response?.data?.message || "Failed to approve.");
@@ -235,7 +251,8 @@ async function reject() {
             reason: rejectReason.value,
         });
         booking.value = data.data;
-        showRejectDialog.value = false;
+        showRejectConfirmDialog.value = false;
+        rejectReason.value = "";
         toast.success("Booking rejected.");
     } catch (err) {
         toast.error(err.response?.data?.message || "Failed to reject.");
@@ -244,11 +261,23 @@ async function reject() {
     }
 }
 
-async function cancel() {
+function requestRejectConfirmation() {
+    if (!rejectReason.value.trim()) return;
+    showRejectDialog.value = false;
+    showRejectConfirmDialog.value = true;
+}
+
+function cancelRejectConfirmation() {
+    showRejectConfirmDialog.value = false;
+    showRejectDialog.value = true;
+}
+
+async function cancelBooking() {
     cancelling.value = true;
     try {
         const { data } = await adminApi.cancelBooking(props.uuid);
         booking.value = data.data;
+        showCancelDialog.value = false;
         toast.success("Booking cancelled.");
     } catch (err) {
         toast.error(err.response?.data?.message || "Failed to cancel.");

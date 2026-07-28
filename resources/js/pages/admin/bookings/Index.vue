@@ -14,7 +14,7 @@
                     :key="tab.value"
                     @click="statusFilter = tab.value"
                     :class="[
-                        'rounded-lg px-4 py-1.5 text-sm font-medium transition-all cursor-pointer whitespace-nowrap',
+                        'rounded-lg px-4 py-1.5 text-[13px] font-medium leading-5 transition-all cursor-pointer whitespace-nowrap',
                         statusFilter === tab.value
                             ? 'bg-white text-gray-900 shadow-sm'
                             : 'text-gray-500 hover:text-gray-700',
@@ -127,11 +127,37 @@
                             :columns="columns"
                             :rows="bookings"
                             :loading="loading"
+                            :sort-key="sortBy"
+                            :sort-direction="sortDirection"
                             empty-message="No bookings found."
+                            @sort="sortBookings"
                             @row-click="viewBooking"
                         >
                             <template #cell-facility="{ row }">
-                                {{ row.facility?.name || "-" }}
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600"
+                                    >
+                                        <svg
+                                            class="h-5 w-5"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke-width="1.5"
+                                            stroke="currentColor"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
+                                            />
+                                        </svg>
+                                    </div>
+                                    <span
+                                        class="min-w-0 truncate text-sm font-medium text-gray-900"
+                                    >
+                                        {{ row.facility?.name || "-" }}
+                                    </span>
+                                </div>
                             </template>
                             <template #cell-resident="{ row }">
                                 {{ row.resident?.name || "-" }}
@@ -146,20 +172,10 @@
                                 <StatusBadge :status="row.status" />
                             </template>
                             <template #cell-actions="{ row }">
-                                <div class="flex gap-2" @click.stop>
-                                    <AppButton
-                                        v-if="row.status === 'Pending'"
-                                        size="xs"
-                                        @click="approveBooking(row)"
-                                        >Approve</AppButton
-                                    >
-                                    <AppButton
-                                        v-if="row.status === 'Pending'"
-                                        size="xs"
-                                        variant="danger"
-                                        @click="openReject(row)"
-                                        >Reject</AppButton
-                                    >
+                                <div class="flex justify-end gap-1" @click.stop>
+                                    <RouterLink :to="{ name: 'admin.bookings.show', params: { uuid: row.uuid } }" class="rounded-lg p-1.5 text-gray-400 transition-colors hover:text-gray-600" title="View details" aria-label="View booking details">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.64 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.64 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+                                    </RouterLink>
                                 </div>
                             </template>
                         </AppTable>
@@ -174,52 +190,23 @@
             </div>
         </Transition>
 
-        <AppModal
-            :show="showRejectDialog"
-            title="Reject Booking"
-            @close="showRejectDialog = false"
-        >
-            <AppTextarea
-                v-model="rejectReason"
-                label="Reason"
-                placeholder="Enter rejection reason"
-                required
-                :rows="3"
-            />
-            <template #footer>
-                <AppButton variant="secondary" @click="showRejectDialog = false"
-                    >Cancel</AppButton
-                >
-                <AppButton
-                    variant="danger"
-                    :loading="rejecting"
-                    @click="handleReject"
-                    >Reject</AppButton
-                >
-            </template>
-        </AppModal>
     </div>
 </template>
 
 <script setup>
 import { ref, watch, onMounted } from "vue";
-import { useRouter, useRoute } from "vue-router";
+import { useRouter, useRoute, RouterLink } from "vue-router";
 import adminApi from "@/api/admin";
 import PageHeader from "@/components/common/PageHeader.vue";
 import AppInput from "@/components/common/AppInput.vue";
 import AppTable from "@/components/common/AppTable.vue";
 import AppPagination from "@/components/common/AppPagination.vue";
-import AppButton from "@/components/common/AppButton.vue";
-import AppModal from "@/components/common/AppModal.vue";
-import AppTextarea from "@/components/common/AppTextarea.vue";
 import StatusBadge from "@/components/common/StatusBadge.vue";
 import SkeletonLoader from "@/components/common/SkeletonLoader.vue";
 import EmptyState from "@/components/common/EmptyState.vue";
-import { useToast } from "@/composables/useToast";
 
 const router = useRouter();
 const route = useRoute();
-const toast = useToast();
 
 const statusTabs = [
     { label: "All", value: "" },
@@ -233,9 +220,9 @@ const statusTabs = [
 const columns = [
     { key: "facility", label: "Facility" },
     { key: "resident", label: "Resident" },
-    { key: "booking_date", label: "Date" },
-    { key: "time", label: "Time" },
-    { key: "status", label: "Status" },
+    { key: "booking_date", label: "Date", sortable: true },
+    { key: "time", label: "Time", sortable: true },
+    { key: "status", label: "Status", sortable: true },
     { key: "actions", label: "" },
 ];
 
@@ -244,11 +231,8 @@ const meta = ref(null);
 const loading = ref(true);
 const statusFilter = ref(route.query.status || "");
 const dateFilter = ref("");
-
-const showRejectDialog = ref(false);
-const rejectTarget = ref(null);
-const rejectReason = ref("");
-const rejecting = ref(false);
+const sortBy = ref("booking_date");
+const sortDirection = ref("desc");
 
 function formatDate(dateStr) {
     if (!dateStr) return "";
@@ -262,9 +246,11 @@ function formatDate(dateStr) {
 async function loadBookings(page = 1) {
     loading.value = true;
     try {
-        const params = { page, per_page: 15 };
+        const params = { page, per_page: 10 };
         if (statusFilter.value) params.status = statusFilter.value;
         if (dateFilter.value) params.date = dateFilter.value;
+        params.sort = sortBy.value === "time" ? "start_time" : sortBy.value;
+        params.direction = sortDirection.value;
         const { data } = await adminApi.getBookings(params);
         bookings.value = data.data.data;
         meta.value = data.data.meta;
@@ -279,42 +265,17 @@ function viewBooking(row) {
     router.push({ name: "admin.bookings.show", params: { uuid: row.uuid } });
 }
 
-async function approveBooking(booking) {
-    try {
-        await adminApi.approveBooking(booking.uuid);
-        toast.success("Booking approved.");
-        loadBookings();
-    } catch (err) {
-        toast.error(
-            err.response?.data?.message || "Failed to approve booking.",
-        );
+function sortBookings(key) {
+    if (sortBy.value === key) {
+        sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
+        return;
     }
+
+    sortBy.value = key;
+    sortDirection.value = "asc";
 }
 
-function openReject(booking) {
-    rejectTarget.value = booking;
-    rejectReason.value = "";
-    showRejectDialog.value = true;
-}
-
-async function handleReject() {
-    if (!rejectReason.value.trim()) return;
-    rejecting.value = true;
-    try {
-        await adminApi.rejectBooking(rejectTarget.value.uuid, {
-            reason: rejectReason.value,
-        });
-        showRejectDialog.value = false;
-        toast.success("Booking rejected.");
-        loadBookings();
-    } catch (err) {
-        toast.error(err.response?.data?.message || "Failed to reject booking.");
-    } finally {
-        rejecting.value = false;
-    }
-}
-
-watch([statusFilter, dateFilter], () => loadBookings(1));
+watch([statusFilter, dateFilter, sortBy, sortDirection], () => loadBookings(1));
 
 onMounted(() => loadBookings());
 </script>

@@ -62,7 +62,7 @@
                     :key="tab.value"
                     @click="statusFilter = tab.value"
                     :class="[
-                        'rounded-lg px-4 py-1.5 text-sm font-medium transition-all cursor-pointer whitespace-nowrap',
+                        'rounded-lg px-4 py-1.5 text-[13px] font-medium leading-5 transition-all cursor-pointer whitespace-nowrap',
                         statusFilter === tab.value
                             ? 'bg-white text-gray-900 shadow-sm'
                             : 'text-gray-500 hover:text-gray-700',
@@ -165,9 +165,30 @@
                             :columns="columns"
                             :rows="visitors"
                             :loading="loading"
+                            :sort-key="sortBy"
+                            :sort-direction="sortDirection"
                             empty-message="No visitors found."
+                            @sort="sortVisitors"
                             @row-click="viewVisitor"
                         >
+                            <template #cell-visitor_name="{ row }">
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-50 text-sm font-semibold text-primary-600"
+                                    >
+                                        {{
+                                            row.visitor_name
+                                                ?.charAt(0)
+                                                ?.toUpperCase() || "?"
+                                        }}
+                                    </div>
+                                    <span
+                                        class="min-w-0 truncate text-sm font-medium text-gray-900"
+                                    >
+                                        {{ row.visitor_name }}
+                                    </span>
+                                </div>
+                            </template>
                             <template #cell-visit_date="{ value }">
                                 {{ formatDate(value) }}
                             </template>
@@ -176,6 +197,13 @@
                             </template>
                             <template #cell-status="{ row }">
                                 <StatusBadge :status="row.status" />
+                            </template>
+                            <template #cell-actions="{ row }">
+                                <div class="flex justify-end gap-1" @click.stop>
+                                    <RouterLink :to="{ name: 'admin.visitors.show', params: { uuid: row.uuid } }" class="rounded-lg p-1.5 text-gray-400 transition-colors hover:text-gray-600" title="View details" aria-label="View visitor details">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.64 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.64 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+                                    </RouterLink>
+                                </div>
                             </template>
                         </AppTable>
                     </div>
@@ -193,7 +221,7 @@
 
 <script setup>
 import { ref, watch, onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, RouterLink } from "vue-router";
 import adminApi from "@/api/admin";
 import PageHeader from "@/components/common/PageHeader.vue";
 import AppInput from "@/components/common/AppInput.vue";
@@ -215,11 +243,12 @@ const statusTabs = [
 ];
 
 const columns = [
-    { key: "visitor_name", label: "Visitor" },
-    { key: "purpose", label: "Purpose" },
+    { key: "visitor_name", label: "Visitor", sortable: true },
+    { key: "purpose", label: "Purpose", sortable: true },
     { key: "resident", label: "Registered By" },
-    { key: "visit_date", label: "Visit Date" },
-    { key: "status", label: "Status" },
+    { key: "visit_date", label: "Visit Date", sortable: true },
+    { key: "status", label: "Status", sortable: true },
+    { key: "actions", label: "" },
 ];
 
 const visitors = ref([]);
@@ -228,6 +257,8 @@ const loading = ref(true);
 const search = ref("");
 const statusFilter = ref("");
 const dateFilter = ref("");
+const sortBy = ref("visit_date");
+const sortDirection = ref("desc");
 
 function formatDate(dateStr) {
     if (!dateStr) return "";
@@ -241,10 +272,12 @@ function formatDate(dateStr) {
 async function loadVisitors(page = 1) {
     loading.value = true;
     try {
-        const params = { page, per_page: 15 };
+        const params = { page, per_page: 10 };
         if (search.value) params.search = search.value;
         if (statusFilter.value) params.status = statusFilter.value;
         if (dateFilter.value) params.date = dateFilter.value;
+        params.sort = sortBy.value;
+        params.direction = sortDirection.value;
         const { data } = await adminApi.getVisitors(params);
         visitors.value = data.data.data;
         meta.value = data.data.meta;
@@ -259,7 +292,17 @@ function viewVisitor(row) {
     router.push({ name: "admin.visitors.show", params: { uuid: row.uuid } });
 }
 
-watch([statusFilter, dateFilter], () => loadVisitors(1));
+function sortVisitors(key) {
+    if (sortBy.value === key) {
+        sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
+        return;
+    }
+
+    sortBy.value = key;
+    sortDirection.value = "asc";
+}
+
+watch([statusFilter, dateFilter, sortBy, sortDirection], () => loadVisitors(1));
 
 onMounted(() => loadVisitors());
 </script>

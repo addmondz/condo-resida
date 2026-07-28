@@ -51,6 +51,10 @@ export default {
         return client.get(`/admin/visitors/${uuid}`);
     },
 
+    getVisitorQr(uuid) {
+        return client.get(`/admin/visitors/${uuid}/qr`);
+    },
+
     cancelVisitor(uuid, data = {}) {
         return client.post(`/admin/visitors/${uuid}/cancel`, data);
     },

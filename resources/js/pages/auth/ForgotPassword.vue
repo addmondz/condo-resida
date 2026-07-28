@@ -68,14 +68,6 @@
                     </AppButton>
                 </form>
 
-                <p class="mt-7 text-center">
-                    <router-link
-                        :to="{ name: 'login' }"
-                        class="text-[13px] font-medium text-primary-600 transition-colors hover:text-primary-700"
-                    >
-                        Back to sign in
-                    </router-link>
-                </p>
             </div>
         </div>
     </div>

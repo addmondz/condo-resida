@@ -51,9 +51,17 @@ class BookingController extends Controller
             $query->whereDate('booking_date', '<=', $request->input('to_date'));
         }
 
-        $bookings = $query->orderByDesc('booking_date')
-            ->orderByDesc('created_at')
-            ->paginate($request->integer('per_page', 15));
+        $sort = $request->input('sort', 'booking_date');
+        $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+        $allowedSorts = ['booking_date', 'start_time', 'status', 'created_at'];
+
+        if (! in_array($sort, $allowedSorts, true)) {
+            $sort = 'booking_date';
+        }
+
+        $bookings = $query->orderBy($sort, $direction)
+            ->orderBy('created_at', $direction)
+            ->paginate($request->integer('per_page', 10));
 
         return $this->success(FacilityBookingResource::collection($bookings)->response()->getData(true));
     }

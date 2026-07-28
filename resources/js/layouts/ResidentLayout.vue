@@ -192,7 +192,7 @@
                     <div class="relative" ref="userMenuRef">
                         <button
                             @click="showUserMenu = !showUserMenu"
-                            class="flex h-9 items-center gap-2 rounded-xl pl-1 pr-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                            class="flex h-9 items-center gap-2 rounded-xl pl-1 pr-2 text-[13px] leading-5 text-gray-700 hover:bg-gray-100 transition-colors"
                         >
                             <span
                                 class="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700"
@@ -239,7 +239,7 @@
                                 </div>
                                 <router-link
                                     :to="{ name: 'resident.profile' }"
-                                    class="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                    class="flex items-center gap-2.5 px-4 py-2.5 text-[13px] leading-5 text-gray-700 hover:bg-gray-50 transition-colors"
                                     @click="showUserMenu = false"
                                 >
                                     <svg
@@ -259,7 +259,7 @@
                                 </router-link>
                                 <button
                                     @click="handleLogout"
-                                    class="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                    class="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] leading-5 text-gray-700 hover:bg-gray-50 transition-colors"
                                 >
                                     <svg
                                         class="h-4 w-4 text-gray-400"

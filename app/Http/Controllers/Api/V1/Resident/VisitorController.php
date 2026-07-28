@@ -58,9 +58,17 @@ class VisitorController extends Controller
             $query->whereDate('visit_date', '<=', $request->input('to_date'));
         }
 
-        $visitors = $query->orderByDesc('visit_date')
-            ->orderByDesc('created_at')
-            ->paginate($request->integer('per_page', 15));
+        $sort = $request->input('sort', 'visit_date');
+        $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+        $allowedSorts = ['visitor_name', 'purpose', 'visit_date', 'status', 'created_at'];
+
+        if (! in_array($sort, $allowedSorts, true)) {
+            $sort = 'visit_date';
+        }
+
+        $visitors = $query->orderBy($sort, $direction)
+            ->orderBy('created_at', $direction)
+            ->paginate($request->integer('per_page', 10));
 
         return $this->success(VisitorRegistrationResource::collection($visitors)->response()->getData(true));
     }

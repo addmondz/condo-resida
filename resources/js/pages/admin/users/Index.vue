@@ -65,13 +65,15 @@
 
         <!-- Status Tabs -->
         <div class="mb-4">
-            <div class="inline-flex rounded-xl bg-gray-100 p-1">
+            <div
+                class="flex max-w-full flex-wrap gap-1 rounded-xl bg-gray-100 p-1 sm:inline-flex sm:flex-nowrap"
+            >
                 <button
                     v-for="tab in statusTabs"
                     :key="tab.value"
                     @click="statusFilter = tab.value"
                     :class="[
-                        'rounded-lg px-4 py-1.5 text-sm font-medium transition-all cursor-pointer',
+                        'rounded-lg px-4 py-1.5 text-[13px] font-medium leading-5 transition-all cursor-pointer whitespace-nowrap',
                         statusFilter === tab.value
                             ? 'bg-white text-gray-900 shadow-sm'
                             : 'text-gray-500 hover:text-gray-700',
@@ -156,7 +158,7 @@
                                     >
                                     <span
                                         v-if="user.roles?.length"
-                                        class="shrink-0 capitalize"
+                                        class="min-w-0 max-w-[8rem] truncate capitalize"
                                         >{{ user.roles.join(", ") }}</span
                                     >
                                 </div>
@@ -183,9 +185,30 @@
                             :columns="columns"
                             :rows="users"
                             :loading="loading"
+                            :sort-key="sortBy"
+                            :sort-direction="sortDirection"
                             empty-message="No users found."
+                            @sort="sortUsers"
                             @row-click="viewUser"
                         >
+                            <template #cell-name="{ row }">
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-50 text-sm font-semibold text-primary-600"
+                                    >
+                                        {{
+                                            row.name
+                                                ?.charAt(0)
+                                                ?.toUpperCase() || "?"
+                                        }}
+                                    </div>
+                                    <span
+                                        class="min-w-0 truncate text-sm font-medium text-gray-900"
+                                    >
+                                        {{ row.name }}
+                                    </span>
+                                </div>
+                            </template>
                             <template #cell-unit="{ row }">
                                 {{ row.unit?.property_name || "-"
                                 }}{{
@@ -203,20 +226,13 @@
                                 <StatusBadge :status="row.status" />
                             </template>
                             <template #cell-actions="{ row }">
-                                <div class="flex gap-2" @click.stop>
-                                    <AppButton
-                                        v-if="row.status === 'pending'"
-                                        size="xs"
-                                        @click="approveUser(row)"
-                                        >Approve</AppButton
-                                    >
-                                    <AppButton
-                                        v-if="row.status === 'pending'"
-                                        size="xs"
-                                        variant="danger"
-                                        @click="openReject(row)"
-                                        >Reject</AppButton
-                                    >
+                                <div class="flex justify-end gap-1" @click.stop>
+                                    <RouterLink :to="{ name: 'admin.users.show', params: { uuid: row.uuid } }" class="rounded-lg p-1.5 text-gray-400 transition-colors hover:text-gray-600" title="View details" aria-label="View user details">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.64 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.64 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+                                    </RouterLink>
+                                    <RouterLink :to="{ name: 'admin.users.edit', params: { uuid: row.uuid } }" class="rounded-lg p-1.5 text-gray-400 transition-colors hover:text-gray-600" title="Edit" aria-label="Edit user">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" /></svg>
+                                    </RouterLink>
                                 </div>
                             </template>
                         </AppTable>
@@ -231,40 +247,12 @@
             </div>
         </Transition>
 
-        <AppModal
-            :show="showRejectDialog"
-            title="Reject User"
-            @close="showRejectDialog = false"
-        >
-            <p class="text-sm text-gray-600 mb-4">
-                Reject <strong>{{ rejectTarget?.name }}</strong
-                >?
-            </p>
-            <AppTextarea
-                v-model="rejectReason"
-                label="Reason"
-                placeholder="Enter rejection reason"
-                required
-                :rows="3"
-            />
-            <template #footer>
-                <AppButton variant="secondary" @click="showRejectDialog = false"
-                    >Cancel</AppButton
-                >
-                <AppButton
-                    variant="danger"
-                    :loading="rejecting"
-                    @click="handleReject"
-                    >Reject</AppButton
-                >
-            </template>
-        </AppModal>
     </div>
 </template>
 
 <script setup>
 import { ref, watch, onMounted } from "vue";
-import { useRouter, useRoute } from "vue-router";
+import { useRouter, useRoute, RouterLink } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import adminApi from "@/api/admin";
 import PageHeader from "@/components/common/PageHeader.vue";
@@ -272,17 +260,12 @@ import AppSelect from "@/components/common/AppSelect.vue";
 import AppTable from "@/components/common/AppTable.vue";
 import AppPagination from "@/components/common/AppPagination.vue";
 import AppButton from "@/components/common/AppButton.vue";
-import AppModal from "@/components/common/AppModal.vue";
-import AppTextarea from "@/components/common/AppTextarea.vue";
 import StatusBadge from "@/components/common/StatusBadge.vue";
 import SkeletonLoader from "@/components/common/SkeletonLoader.vue";
 import EmptyState from "@/components/common/EmptyState.vue";
-import { useToast } from "@/composables/useToast";
-
 const router = useRouter();
 const route = useRoute();
 const auth = useAuthStore();
-const toast = useToast();
 
 const statusTabs = [
     { label: "All", value: "" },
@@ -300,11 +283,11 @@ const roleOptions = [
 ];
 
 const columns = [
-    { key: "name", label: "Name" },
-    { key: "email", label: "Email" },
+    { key: "name", label: "Name", sortable: true },
+    { key: "email", label: "Email", sortable: true },
     { key: "unit", label: "Property / Unit" },
     { key: "roles", label: "Role" },
-    { key: "status", label: "Status" },
+    { key: "status", label: "Status", sortable: true },
     { key: "actions", label: "" },
 ];
 
@@ -314,19 +297,18 @@ const loading = ref(true);
 const search = ref("");
 const statusFilter = ref(route.query.status || "");
 const roleFilter = ref("");
-
-const showRejectDialog = ref(false);
-const rejectTarget = ref(null);
-const rejectReason = ref("");
-const rejecting = ref(false);
+const sortBy = ref("created_at");
+const sortDirection = ref("desc");
 
 async function loadUsers(page = 1) {
     loading.value = true;
     try {
-        const params = { page, per_page: 15 };
+        const params = { page, per_page: 10 };
         if (search.value) params.search = search.value;
         if (statusFilter.value) params.status = statusFilter.value;
         if (roleFilter.value) params.role = roleFilter.value;
+        params.sort = sortBy.value;
+        params.direction = sortDirection.value;
         const { data } = await adminApi.getUsers(params);
         users.value = data.data.data;
         meta.value = data.data.meta;
@@ -341,40 +323,17 @@ function viewUser(row) {
     router.push({ name: "admin.users.show", params: { uuid: row.uuid } });
 }
 
-async function approveUser(user) {
-    try {
-        await adminApi.approveUser(user.uuid);
-        toast.success("User approved.");
-        loadUsers();
-    } catch (err) {
-        toast.error(err.response?.data?.message || "Failed to approve user.");
+function sortUsers(key) {
+    if (sortBy.value === key) {
+        sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
+        return;
     }
+
+    sortBy.value = key;
+    sortDirection.value = "asc";
 }
 
-function openReject(user) {
-    rejectTarget.value = user;
-    rejectReason.value = "";
-    showRejectDialog.value = true;
-}
-
-async function handleReject() {
-    if (!rejectReason.value.trim()) return;
-    rejecting.value = true;
-    try {
-        await adminApi.rejectUser(rejectTarget.value.uuid, {
-            reason: rejectReason.value,
-        });
-        showRejectDialog.value = false;
-        toast.success("User rejected.");
-        loadUsers();
-    } catch (err) {
-        toast.error(err.response?.data?.message || "Failed to reject user.");
-    } finally {
-        rejecting.value = false;
-    }
-}
-
-watch([statusFilter, roleFilter], () => loadUsers(1));
+watch([statusFilter, roleFilter, sortBy, sortDirection], () => loadUsers(1));
 
 onMounted(() => loadUsers());
 </script>

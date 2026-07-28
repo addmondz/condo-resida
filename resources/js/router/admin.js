@@ -34,6 +34,12 @@ export default [
                 props: true,
             },
             {
+                path: "users/:uuid/edit",
+                name: "admin.users.edit",
+                component: () => import("@/pages/admin/users/Edit.vue"),
+                props: true,
+            },
+            {
                 path: "visitors",
                 name: "admin.visitors",
                 component: () => import("@/pages/admin/visitors/Index.vue"),

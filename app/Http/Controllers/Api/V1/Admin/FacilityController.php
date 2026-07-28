@@ -28,7 +28,16 @@ class FacilityController extends Controller
             $query->where('property_id', $request->input('property_id'));
         }
 
-        $facilities = $query->orderBy('name')->paginate($request->integer('per_page', 15));
+        $sort = $request->input('sort', 'name');
+        $direction = $request->input('direction') === 'desc' ? 'desc' : 'asc';
+        $allowedSorts = ['name', 'capacity', 'opening_time', 'status'];
+
+        if (! in_array($sort, $allowedSorts, true)) {
+            $sort = 'name';
+        }
+
+        $facilities = $query->orderBy($sort, $direction)
+            ->paginate($request->integer('per_page', 10));
 
         return $this->success(FacilityResource::collection($facilities)->response()->getData(true));
     }

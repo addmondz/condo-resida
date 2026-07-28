@@ -87,7 +87,10 @@
                     :columns="columns"
                     :rows="logs"
                     :loading="loading"
+                    :sort-key="sortBy"
+                    :sort-direction="sortDirection"
                     empty-message="No activity logs found."
+                    @sort="sortLogs"
                 >
                     <template #cell-action="{ value }">
                         <span class="capitalize">{{
@@ -127,10 +130,10 @@ const actionOptions = [
 ];
 
 const columns = [
-    { key: "action", label: "Action" },
+    { key: "action", label: "Action", sortable: true },
     { key: "visitor_registration.visitor_name", label: "Visitor" },
     { key: "guard_user.name", label: "Guard" },
-    { key: "created_at", label: "Time" },
+    { key: "created_at", label: "Time", sortable: true },
 ];
 
 const logs = ref([]);
@@ -138,6 +141,8 @@ const meta = ref(null);
 const loading = ref(true);
 const dateFilter = ref("");
 const actionFilter = ref("");
+const sortBy = ref("created_at");
+const sortDirection = ref("desc");
 
 function formatAction(action) {
     if (!action) return "-";
@@ -158,9 +163,11 @@ function formatDateTime(dateStr) {
 async function loadLogs(page = 1) {
     loading.value = true;
     try {
-        const params = { page, per_page: 15 };
+        const params = { page, per_page: 10 };
         if (dateFilter.value) params.date = dateFilter.value;
         if (actionFilter.value) params.action = actionFilter.value;
+        params.sort = sortBy.value;
+        params.direction = sortDirection.value;
         const { data } = await guardApi.getActivityLogs(params);
         logs.value = data.data.data;
         meta.value = data.data.meta;
@@ -171,7 +178,17 @@ async function loadLogs(page = 1) {
     }
 }
 
-watch([dateFilter, actionFilter], () => loadLogs(1));
+function sortLogs(key) {
+    if (sortBy.value === key) {
+        sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
+        return;
+    }
+
+    sortBy.value = key;
+    sortDirection.value = "asc";
+}
+
+watch([dateFilter, actionFilter, sortBy, sortDirection], () => loadLogs(1));
 
 onMounted(() => loadLogs());
 </script>

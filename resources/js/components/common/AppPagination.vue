@@ -44,7 +44,7 @@
                 :key="page"
                 :disabled="page === '...'"
                 :class="[
-                    'hidden h-8 min-w-8 items-center justify-center rounded-lg px-2 text-sm font-medium transition-colors sm:flex',
+                    'hidden h-8 min-w-8 items-center justify-center rounded-lg px-2 text-[13px] font-medium leading-5 transition-colors sm:flex',
                     page === meta.current_page
                         ? 'bg-primary-600 text-white'
                         : page === '...'

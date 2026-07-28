@@ -102,7 +102,7 @@
                 <!-- Register link -->
                 <router-link
                     :to="{ name: 'register' }"
-                    class="flex w-full items-center justify-center rounded-[10px] border border-zinc-200 bg-white px-4 py-2.5 text-[13px] font-medium text-zinc-700 shadow-sm shadow-zinc-900/[0.04] transition-all duration-200 hover:border-zinc-300 hover:bg-zinc-50 active:scale-[0.98]"
+                    class="flex w-full items-center justify-center rounded-[10px] border border-zinc-200 bg-white px-4 py-2.5 text-[13px] font-medium leading-5 text-zinc-700 shadow-sm shadow-zinc-900/[0.04] transition-all duration-200 hover:border-zinc-300 hover:bg-zinc-50 active:scale-[0.98]"
                 >
                     Create an account
                 </router-link>

@@ -62,7 +62,7 @@
                     :key="tab.value"
                     @click="statusFilter = tab.value"
                     :class="[
-                        'rounded-lg px-4 py-1.5 text-sm font-medium transition-all cursor-pointer whitespace-nowrap',
+                        'rounded-lg px-4 py-1.5 text-[13px] font-medium leading-5 transition-all cursor-pointer whitespace-nowrap',
                         statusFilter === tab.value
                             ? 'bg-white text-gray-900 shadow-sm'
                             : 'text-gray-500 hover:text-gray-700',
@@ -171,7 +171,10 @@
                             :columns="columns"
                             :rows="visitors"
                             :loading="loading"
+                            :sort-key="sortBy"
+                            :sort-direction="sortDirection"
                             empty-message="No visitors found."
+                            @sort="sortVisitors"
                             @row-click="viewVisitor"
                         >
                             <template #cell-visit_date="{ value }">
@@ -222,11 +225,11 @@ const tabs = [
 ];
 
 const columns = [
-    { key: "visitor_name", label: "Visitor" },
-    { key: "purpose", label: "Purpose" },
+    { key: "visitor_name", label: "Visitor", sortable: true },
+    { key: "purpose", label: "Purpose", sortable: true },
     { key: "unit", label: "Unit" },
-    { key: "visit_date", label: "Date" },
-    { key: "status", label: "Status" },
+    { key: "visit_date", label: "Date", sortable: true },
+    { key: "status", label: "Status", sortable: true },
 ];
 
 const visitors = ref([]);
@@ -235,6 +238,8 @@ const loading = ref(true);
 const search = ref("");
 const statusFilter = ref("");
 const dateFilter = ref(new Date().toISOString().split("T")[0]);
+const sortBy = ref("created_at");
+const sortDirection = ref("desc");
 
 function formatDate(dateStr) {
     if (!dateStr) return "";
@@ -248,10 +253,12 @@ function formatDate(dateStr) {
 async function loadVisitors(page = 1) {
     loading.value = true;
     try {
-        const params = { page, per_page: 15 };
+        const params = { page, per_page: 10 };
         if (search.value) params.search = search.value;
         if (statusFilter.value) params.status = statusFilter.value;
         if (dateFilter.value) params.date = dateFilter.value;
+        params.sort = sortBy.value;
+        params.direction = sortDirection.value;
         const { data } = await guardApi.getVisitors(params);
         visitors.value = data.data.data;
         meta.value = data.data.meta;
@@ -266,7 +273,17 @@ function viewVisitor(row) {
     router.push({ name: "guard.visitors.show", params: { uuid: row.uuid } });
 }
 
-watch([statusFilter, dateFilter], () => loadVisitors(1));
+function sortVisitors(key) {
+    if (sortBy.value === key) {
+        sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
+        return;
+    }
+
+    sortBy.value = key;
+    sortDirection.value = "asc";
+}
+
+watch([statusFilter, dateFilter, sortBy, sortDirection], () => loadVisitors(1));
 
 onMounted(() => loadVisitors());
 </script>

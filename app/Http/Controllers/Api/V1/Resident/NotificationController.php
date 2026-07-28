@@ -26,7 +26,7 @@ class NotificationController extends Controller
                 $query->where('user_id', auth()->id());
             }])
             ->orderByDesc('published_at')
-            ->paginate($request->integer('per_page', 15));
+            ->paginate($request->integer('per_page', 10));
 
         return $this->success(AppNotificationResource::collection($notifications)->response()->getData(true));
     }

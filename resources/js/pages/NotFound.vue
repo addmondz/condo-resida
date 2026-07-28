@@ -33,12 +33,6 @@
             <p class="mt-1 text-sm text-gray-500">
                 Sorry, we couldn't find the page you're looking for.
             </p>
-            <router-link
-                to="/"
-                class="mt-6 inline-flex items-center justify-center rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700 active:scale-[0.98]"
-            >
-                Go back home
-            </router-link>
         </div>
     </div>
 </template>

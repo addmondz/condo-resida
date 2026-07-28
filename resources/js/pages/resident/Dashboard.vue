@@ -226,7 +226,7 @@
                         </h2>
                         <router-link
                             :to="{ name: 'resident.visitors' }"
-                            class="text-sm font-medium text-primary-600 hover:text-primary-500 transition-colors"
+                            class="text-[13px] font-medium leading-5 text-primary-600 hover:text-primary-500 transition-colors"
                             >View all</router-link
                         >
                     </div>
@@ -260,7 +260,7 @@
                         </p>
                         <router-link
                             :to="{ name: 'resident.visitors.create' }"
-                            class="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-500"
+                            class="mt-3 inline-flex items-center gap-1 text-[13px] font-medium leading-5 text-primary-600 hover:text-primary-500"
                         >
                             Register your first visitor
                             <svg
@@ -322,7 +322,7 @@
                         </h2>
                         <router-link
                             :to="{ name: 'resident.bookings' }"
-                            class="text-sm font-medium text-primary-600 hover:text-primary-500 transition-colors"
+                            class="text-[13px] font-medium leading-5 text-primary-600 hover:text-primary-500 transition-colors"
                             >View all</router-link
                         >
                     </div>
@@ -356,7 +356,7 @@
                         </p>
                         <router-link
                             :to="{ name: 'resident.facilities' }"
-                            class="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-500"
+                            class="mt-3 inline-flex items-center gap-1 text-[13px] font-medium leading-5 text-primary-600 hover:text-primary-500"
                         >
                             Browse facilities
                             <svg

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Enums\VisitorStatus;
 use App\Http\Controllers\ApiResponseTrait;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\ScopesToProperty;
@@ -57,9 +58,17 @@ class VisitorController extends Controller
             });
         }
 
-        $visitors = $query->orderByDesc('visit_date')
-            ->orderByDesc('created_at')
-            ->paginate($request->integer('per_page', 15));
+        $sort = $request->input('sort', 'visit_date');
+        $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+        $allowedSorts = ['visitor_name', 'purpose', 'visit_date', 'status', 'created_at'];
+
+        if (! in_array($sort, $allowedSorts, true)) {
+            $sort = 'visit_date';
+        }
+
+        $visitors = $query->orderBy($sort, $direction)
+            ->orderBy('created_at', $direction)
+            ->paginate($request->integer('per_page', 10));
 
         return $this->success(VisitorRegistrationResource::collection($visitors)->response()->getData(true));
     }
@@ -78,6 +87,21 @@ class VisitorController extends Controller
         ]);
 
         return $this->success(new VisitorRegistrationResource($visitor));
+    }
+
+    public function qr(VisitorRegistration $visitor): JsonResponse
+    {
+        if ($visitor->status !== VisitorStatus::Active || ! $visitor->encrypted_qr_token) {
+            return $this->error('This visitor QR code is no longer available.', 422, [
+                'visitor' => ['Only active visitor passes can display a QR code.'],
+            ]);
+        }
+
+        return $this->success([
+            'uuid' => $visitor->uuid,
+            'reference_number' => $visitor->reference_number,
+            'qr_token' => $visitor->encrypted_qr_token,
+        ]);
     }
 
     public function cancel(CancelVisitorRequest $request, VisitorRegistration $visitor): JsonResponse

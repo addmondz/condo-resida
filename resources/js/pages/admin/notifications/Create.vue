@@ -103,7 +103,7 @@
                                 v-for="uuid in form.resident_uuids"
                                 :key="uuid"
                                 type="button"
-                                class="cursor-pointer rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-200"
+                                class="cursor-pointer rounded-full bg-gray-100 px-2.5 py-1.5 text-[13px] font-medium leading-5 text-gray-700 transition-colors hover:bg-gray-200"
                                 @click="removeResident(uuid)"
                             >
                                 {{ residentLabel(uuid) }} ×

@@ -87,8 +87,16 @@ class UserController extends Controller
             });
         }
 
-        $users = $query->orderByDesc('created_at')
-            ->paginate($request->integer('per_page', 15));
+        $sort = $request->input('sort', 'created_at');
+        $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+        $allowedSorts = ['name', 'email', 'status', 'created_at'];
+
+        if (! in_array($sort, $allowedSorts, true)) {
+            $sort = 'created_at';
+        }
+
+        $users = $query->orderBy($sort, $direction)
+            ->paginate($request->integer('per_page', 10));
 
         return $this->success(UserResource::collection($users)->response()->getData(true));
     }

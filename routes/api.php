@@ -118,6 +118,7 @@ Route::prefix('v1')->group(function () {
             Route::get('visitors', [AdminVisitorController::class, 'index']);
             Route::get('visitors/export', [AdminVisitorController::class, 'export']);
             Route::get('visitors/{visitor}', [AdminVisitorController::class, 'show']);
+            Route::get('visitors/{visitor}/qr', [AdminVisitorController::class, 'qr']);
             Route::post('visitors/{visitor}/cancel', [AdminVisitorController::class, 'cancel']);
 
             // Facilities

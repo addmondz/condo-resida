@@ -16,8 +16,7 @@ class ActivityLogController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = VisitorActivityLog::with(['visitorRegistration.resident', 'guardUser'])
-            ->orderByDesc('created_at');
+        $query = VisitorActivityLog::with(['visitorRegistration.resident', 'guardUser']);
 
         $propertyId = $this->scopedPropertyId();
         if ($propertyId !== null) {
@@ -32,7 +31,16 @@ class ActivityLogController extends Controller
             $query->where('action', $request->input('action'));
         }
 
-        $logs = $query->paginate($request->integer('per_page', 15));
+        $sort = $request->input('sort', 'created_at');
+        $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+        $allowedSorts = ['action', 'created_at'];
+
+        if (! in_array($sort, $allowedSorts, true)) {
+            $sort = 'created_at';
+        }
+
+        $logs = $query->orderBy($sort, $direction)
+            ->paginate($request->integer('per_page', 10));
 
         return $this->success($logs);
     }

@@ -7,30 +7,7 @@
                 { label: 'Users', to: { name: 'admin.users' } },
                 { label: user.name || 'Details' },
             ]"
-        >
-            <template #actions>
-                <AppButton
-                    variant="secondary"
-                    :to="{ name: 'admin.users' }"
-                    size="sm"
-                >
-                    <svg
-                        class="h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke-width="1.5"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
-                        />
-                    </svg>
-                    Back to Users
-                </AppButton>
-            </template>
-        </PageHeader>
+        />
 
         <SkeletonLoader
             v-if="loading"
@@ -72,7 +49,10 @@
                             {{ user.email }}
                         </p>
                     </div>
-                    <StatusBadge :status="user.status" />
+                    <div class="flex items-center gap-2">
+                        <StatusBadge :status="user.status" />
+                        <AppButton variant="secondary" size="sm" :to="{ name: 'admin.users.edit', params: { uuid: user.uuid } }">Edit</AppButton>
+                    </div>
                 </div>
 
                 <div class="px-5 py-5">
@@ -122,8 +102,7 @@
             <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <AppButton
                     v-if="user.status === 'pending'"
-                    @click="approve"
-                    :loading="approving"
+                    @click="showApproveDialog = true"
                     >Approve</AppButton
                 >
                 <AppButton
@@ -140,17 +119,51 @@
                 >
                 <AppButton
                     v-if="user.status === 'suspended'"
-                    @click="reactivate"
-                    :loading="reactivating"
+                    @click="showReactivateDialog = true"
                     >Reactivate</AppButton
                 >
                 <AppButton
                     variant="secondary"
-                    @click="resetPassword"
-                    :loading="resettingPassword"
+                    @click="showResetDialog = true"
                     >Send Password Reset</AppButton
                 >
             </div>
+
+            <!-- Approve Confirmation -->
+            <ConfirmationDialog
+                :show="showApproveDialog"
+                title="Approve User"
+                :message="`Are you sure you want to approve ${user.name}? They will gain access to the system.`"
+                confirm-label="Approve"
+                confirm-variant="primary"
+                :loading="approving"
+                @confirm="approve"
+                @cancel="showApproveDialog = false"
+            />
+
+            <!-- Reactivate Confirmation -->
+            <ConfirmationDialog
+                :show="showReactivateDialog"
+                title="Reactivate User"
+                :message="`Are you sure you want to reactivate ${user.name}? They will regain access to the system.`"
+                confirm-label="Reactivate"
+                confirm-variant="primary"
+                :loading="reactivating"
+                @confirm="reactivate"
+                @cancel="showReactivateDialog = false"
+            />
+
+            <!-- Reset Password Confirmation -->
+            <ConfirmationDialog
+                :show="showResetDialog"
+                title="Send Password Reset"
+                :message="`Send a password reset link to ${user.email}?`"
+                confirm-label="Send Reset Link"
+                confirm-variant="primary"
+                :loading="resettingPassword"
+                @confirm="resetPassword"
+                @cancel="showResetDialog = false"
+            />
 
             <!-- Reject Dialog -->
             <AppModal
@@ -174,11 +187,23 @@
                     <AppButton
                         variant="danger"
                         :loading="rejecting"
-                        @click="reject"
+                        @click="requestRejectConfirmation"
                         >Reject</AppButton
                     >
                 </template>
             </AppModal>
+
+            <!-- Reject Confirmation -->
+            <ConfirmationDialog
+                :show="showRejectConfirmDialog"
+                title="Confirm Rejection"
+                :message="`Are you sure you want to reject ${user.name}? This rejection reason will be visible to the user.`"
+                confirm-label="Reject"
+                confirm-variant="danger"
+                :loading="rejecting"
+                @confirm="reject"
+                @cancel="cancelRejectConfirmation"
+            />
 
             <!-- Suspend Dialog -->
             <AppModal
@@ -216,6 +241,7 @@ import adminApi from "@/api/admin";
 import AppButton from "@/components/common/AppButton.vue";
 import AppModal from "@/components/common/AppModal.vue";
 import AppTextarea from "@/components/common/AppTextarea.vue";
+import ConfirmationDialog from "@/components/common/ConfirmationDialog.vue";
 import StatusBadge from "@/components/common/StatusBadge.vue";
 import PageHeader from "@/components/common/PageHeader.vue";
 import SkeletonLoader from "@/components/common/SkeletonLoader.vue";
@@ -236,10 +262,14 @@ const suspending = ref(false);
 const reactivating = ref(false);
 const resettingPassword = ref(false);
 
+const showApproveDialog = ref(false);
 const showRejectDialog = ref(false);
+const showRejectConfirmDialog = ref(false);
 const rejectReason = ref("");
 const showSuspendDialog = ref(false);
 const suspendReason = ref("");
+const showReactivateDialog = ref(false);
+const showResetDialog = ref(false);
 
 function formatDateTime(dateStr) {
     if (!dateStr) return "-";
@@ -268,6 +298,7 @@ async function approve() {
     try {
         const { data } = await adminApi.approveUser(props.uuid);
         user.value = data.data;
+        showApproveDialog.value = false;
         toast.success("User approved successfully.");
     } catch (err) {
         toast.error(err.response?.data?.message || "Failed to approve user.");
@@ -284,13 +315,25 @@ async function reject() {
             reason: rejectReason.value,
         });
         user.value = data.data;
-        showRejectDialog.value = false;
+        showRejectConfirmDialog.value = false;
+        rejectReason.value = "";
         toast.success("User rejected.");
     } catch (err) {
         toast.error(err.response?.data?.message || "Failed to reject user.");
     } finally {
         rejecting.value = false;
     }
+}
+
+function requestRejectConfirmation() {
+    if (!rejectReason.value.trim()) return;
+    showRejectDialog.value = false;
+    showRejectConfirmDialog.value = true;
+}
+
+function cancelRejectConfirmation() {
+    showRejectConfirmDialog.value = false;
+    showRejectDialog.value = true;
 }
 
 async function suspend() {
@@ -314,6 +357,7 @@ async function reactivate() {
     try {
         const { data } = await adminApi.reactivateUser(props.uuid);
         user.value = data.data;
+        showReactivateDialog.value = false;
         toast.success("User reactivated.");
     } catch (err) {
         toast.error(
@@ -328,6 +372,7 @@ async function resetPassword() {
     resettingPassword.value = true;
     try {
         await adminApi.resetUserPassword(props.uuid);
+        showResetDialog.value = false;
         toast.success("Password reset link sent to user.");
     } catch (err) {
         toast.error(

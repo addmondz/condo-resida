@@ -73,7 +73,7 @@
                     :key="tab.value"
                     @click="activeTab = tab.value"
                     :class="[
-                        'rounded-lg px-4 py-1.5 text-sm font-medium transition-all cursor-pointer',
+                        'rounded-lg px-4 py-1.5 text-[13px] font-medium leading-5 transition-all cursor-pointer',
                         activeTab === tab.value
                             ? 'bg-white text-gray-900 shadow-sm'
                             : 'text-gray-500 hover:text-gray-700',
@@ -201,9 +201,30 @@
                             :columns="columns"
                             :rows="visitors"
                             :loading="loading"
+                            :sort-key="sortBy"
+                            :sort-direction="sortDirection"
                             empty-message="No visitors found."
+                            @sort="sortVisitors"
                             @row-click="viewVisitor"
                         >
+                            <template #cell-visitor_name="{ row }">
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-50 text-sm font-semibold text-primary-600"
+                                    >
+                                        {{
+                                            row.visitor_name
+                                                ?.charAt(0)
+                                                ?.toUpperCase() || "?"
+                                        }}
+                                    </div>
+                                    <span
+                                        class="min-w-0 truncate text-sm font-medium text-gray-900"
+                                    >
+                                        {{ row.visitor_name }}
+                                    </span>
+                                </div>
+                            </template>
                             <template #cell-purpose="{ value }">
                                 <span class="capitalize">{{
                                     formatPurpose(value)
@@ -221,21 +242,27 @@
                                         name: 'resident.visitors.show',
                                         params: { uuid: row.uuid },
                                     }"
-                                    class="inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
+                                    class="inline-flex rounded-lg p-1.5 text-gray-400 transition-colors hover:text-gray-600"
+                                    title="View details"
+                                    aria-label="View visitor details"
                                     @click.stop
                                 >
-                                    View
                                     <svg
-                                        class="h-3.5 w-3.5"
+                                        class="h-4 w-4"
                                         fill="none"
                                         viewBox="0 0 24 24"
-                                        stroke-width="2"
+                                        stroke-width="1.5"
                                         stroke="currentColor"
                                     >
                                         <path
                                             stroke-linecap="round"
                                             stroke-linejoin="round"
-                                            d="m8.25 4.5 7.5 7.5-7.5 7.5"
+                                            d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.64 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.64 0-8.573-3.007-9.963-7.178Z"
+                                        />
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
                                         />
                                     </svg>
                                 </router-link>
@@ -275,10 +302,10 @@ const tabs = [
 ];
 
 const columns = [
-    { key: "visitor_name", label: "Visitor Name" },
-    { key: "purpose", label: "Purpose" },
-    { key: "visit_date", label: "Visit Date" },
-    { key: "status", label: "Status" },
+    { key: "visitor_name", label: "Visitor Name", sortable: true },
+    { key: "purpose", label: "Purpose", sortable: true },
+    { key: "visit_date", label: "Visit Date", sortable: true },
+    { key: "status", label: "Status", sortable: true },
     { key: "actions", label: "" },
 ];
 
@@ -291,6 +318,8 @@ const search = ref(
 const visitors = ref([]);
 const meta = ref(null);
 const loading = ref(true);
+const sortBy = ref("visit_date");
+const sortDirection = ref("desc");
 let searchTimer = null;
 
 function formatDate(dateStr) {
@@ -311,7 +340,13 @@ function formatPurpose(purpose) {
 async function loadVisitors(page = 1) {
     loading.value = true;
     try {
-        const params = { page, per_page: 15, filter: activeTab.value };
+        const params = {
+            page,
+            per_page: 10,
+            filter: activeTab.value,
+            sort: sortBy.value,
+            direction: sortDirection.value,
+        };
         if (search.value.trim()) {
             params.search = search.value.trim();
         }
@@ -338,6 +373,18 @@ function viewVisitor(row) {
 watch(activeTab, () => {
     loadVisitors(1);
 });
+
+function sortVisitors(key) {
+    if (sortBy.value === key) {
+        sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
+        return;
+    }
+
+    sortBy.value = key;
+    sortDirection.value = "asc";
+}
+
+watch([sortBy, sortDirection], () => loadVisitors(1));
 
 watch(search, () => {
     window.clearTimeout(searchTimer);

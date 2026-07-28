@@ -59,7 +59,8 @@
                 <div
                     v-for="notification in notifications"
                     :key="notification.uuid"
-                    class="rounded-xl bg-white border border-gray-200 px-5 py-3.5"
+                    @click="viewNotification(notification)"
+                    class="rounded-xl bg-white border border-gray-200 px-5 py-3.5 cursor-pointer transition-colors active:bg-gray-50"
                 >
                     <div class="flex items-start justify-between gap-2">
                         <div class="min-w-0 flex-1">
@@ -87,21 +88,6 @@
                             </p>
                         </div>
                     </div>
-                    <div class="mt-3 flex gap-2">
-                        <AppButton
-                            v-if="notification.status === 'draft'"
-                            size="xs"
-                            @click="publishNotification(notification)"
-                            >Publish</AppButton
-                        >
-                        <AppButton
-                            v-if="notification.status !== 'archived'"
-                            size="xs"
-                            variant="ghost"
-                            @click="archiveNotification(notification)"
-                            >Archive</AppButton
-                        >
-                    </div>
                 </div>
             </div>
 
@@ -111,7 +97,11 @@
                     :columns="columns"
                     :rows="notifications"
                     :loading="loading"
+                    :sort-key="sortBy"
+                    :sort-direction="sortDirection"
                     empty-message="No notifications found."
+                    @sort="sortNotifications"
+                    @row-click="viewNotification"
                 >
                     <template #cell-type="{ value }">
                         <span class="capitalize text-xs">{{ value }}</span>
@@ -126,20 +116,10 @@
                         {{ formatDateTime(value) }}
                     </template>
                     <template #cell-actions="{ row }">
-                        <div class="flex justify-end gap-2">
-                            <AppButton
-                                v-if="row.status === 'draft'"
-                                size="sm"
-                                @click.stop="publishNotification(row)"
-                                >Publish</AppButton
-                            >
-                            <AppButton
-                                v-if="row.status !== 'archived'"
-                                size="sm"
-                                variant="ghost"
-                                @click.stop="archiveNotification(row)"
-                                >Archive</AppButton
-                            >
+                        <div class="flex justify-end gap-1" @click.stop>
+                            <RouterLink :to="{ name: 'admin.notifications.show', params: { uuid: row.uuid } }" class="rounded-lg p-1.5 text-gray-400 transition-colors hover:text-gray-600" title="View details" aria-label="View notification details">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.64 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.64 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+                            </RouterLink>
                         </div>
                     </template>
                 </AppTable>
@@ -155,7 +135,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, watch, onMounted } from "vue";
+import { useRouter, RouterLink } from "vue-router";
 import adminApi from "@/api/admin";
 import PageHeader from "@/components/common/PageHeader.vue";
 import AppButton from "@/components/common/AppButton.vue";
@@ -163,22 +144,23 @@ import AppTable from "@/components/common/AppTable.vue";
 import AppPagination from "@/components/common/AppPagination.vue";
 import SkeletonLoader from "@/components/common/SkeletonLoader.vue";
 import EmptyState from "@/components/common/EmptyState.vue";
-import { useToast } from "@/composables/useToast";
 
-const toast = useToast();
+const router = useRouter();
 
 const columns = [
-    { key: "title", label: "Title" },
-    { key: "type", label: "Type" },
-    { key: "target_type", label: "Target" },
-    { key: "status", label: "Status" },
-    { key: "published_at", label: "Published" },
+    { key: "title", label: "Title", sortable: true },
+    { key: "type", label: "Type", sortable: true },
+    { key: "target_type", label: "Target", sortable: true },
+    { key: "status", label: "Status", sortable: true },
+    { key: "published_at", label: "Published", sortable: true },
     { key: "actions", label: "" },
 ];
 
 const notifications = ref([]);
 const meta = ref(null);
 const loading = ref(true);
+const sortBy = ref("created_at");
+const sortDirection = ref("desc");
 
 function formatDateTime(dateStr) {
     if (!dateStr) return "-";
@@ -196,7 +178,9 @@ async function loadNotifications(page = 1) {
     try {
         const { data } = await adminApi.getNotifications({
             page,
-            per_page: 15,
+            per_page: 10,
+            sort: sortBy.value,
+            direction: sortDirection.value,
         });
         notifications.value = data.data.data;
         meta.value = data.data.meta;
@@ -207,33 +191,21 @@ async function loadNotifications(page = 1) {
     }
 }
 
-async function publishNotification(notification) {
-    try {
-        const { data } = await adminApi.publishNotification(notification.uuid);
-        notifications.value = notifications.value.map((item) =>
-            item.uuid === notification.uuid ? data.data : item,
-        );
-        toast.success("Notification published.");
-    } catch (error) {
-        toast.error(
-            error.response?.data?.message || "Failed to publish notification.",
-        );
-    }
+function viewNotification(row) {
+    router.push({ name: "admin.notifications.show", params: { uuid: row.uuid } });
 }
 
-async function archiveNotification(notification) {
-    try {
-        const { data } = await adminApi.archiveNotification(notification.uuid);
-        notifications.value = notifications.value.map((item) =>
-            item.uuid === notification.uuid ? data.data : item,
-        );
-        toast.success("Notification archived.");
-    } catch (error) {
-        toast.error(
-            error.response?.data?.message || "Failed to archive notification.",
-        );
+function sortNotifications(key) {
+    if (sortBy.value === key) {
+        sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
+        return;
     }
+
+    sortBy.value = key;
+    sortDirection.value = "asc";
 }
+
+watch([sortBy, sortDirection], () => loadNotifications(1));
 
 onMounted(() => loadNotifications());
 </script>

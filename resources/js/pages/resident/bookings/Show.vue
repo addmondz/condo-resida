@@ -1,28 +1,5 @@
 <template>
     <div class="pb-16 lg:pb-0">
-        <div class="mb-4">
-            <AppButton
-                variant="ghost"
-                :to="{ name: 'resident.bookings' }"
-                size="sm"
-            >
-                <svg
-                    class="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke-width="1.5"
-                    stroke="currentColor"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
-                    />
-                </svg>
-                Back to Bookings
-            </AppButton>
-        </div>
-
         <!-- Loading -->
         <div v-if="loading" class="space-y-4">
             <SkeletonLoader variant="text" :rows="2" />
@@ -151,7 +128,7 @@
                         name: 'resident.facilities.show',
                         params: { uuid: booking.facility.uuid },
                     }"
-                    class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-[13px] font-medium leading-5 text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                     <svg
                         class="h-4 w-4 text-gray-400"

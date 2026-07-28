@@ -21,14 +21,39 @@ class FacilityController extends Controller
     /**
      * List active facilities.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $facilities = Facility::with('property')
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
+        $query = Facility::with('property')
+            ->where('is_active', true);
 
-        return $this->success(FacilityResource::collection($facilities));
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->input('status') === 'available') {
+            $query->where('is_under_maintenance', false);
+        } elseif ($request->input('status') === 'maintenance') {
+            $query->where('is_under_maintenance', true);
+        }
+
+        $sort = $request->input('sort', 'name');
+        $direction = $request->input('direction') === 'desc' ? 'desc' : 'asc';
+        $allowedSorts = ['name', 'capacity', 'opening_time', 'status'];
+
+        if (! in_array($sort, $allowedSorts, true)) {
+            $sort = 'name';
+        }
+
+        $sortColumn = $sort === 'status' ? 'is_under_maintenance' : $sort;
+
+        $facilities = $query->orderBy($sortColumn, $direction)
+            ->paginate($request->integer('per_page', 10));
+
+        return $this->success(FacilityResource::collection($facilities)->response()->getData(true));
     }
 
     /**

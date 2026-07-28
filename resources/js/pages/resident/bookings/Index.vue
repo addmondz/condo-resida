@@ -29,7 +29,7 @@
                     :key="tab.value"
                     @click="activeTab = tab.value"
                     :class="[
-                        'rounded-lg px-4 py-1.5 text-sm font-medium transition-all cursor-pointer',
+                        'rounded-lg px-4 py-1.5 text-[13px] font-medium leading-5 transition-all cursor-pointer',
                         activeTab === tab.value
                             ? 'bg-white text-gray-900 shadow-sm'
                             : 'text-gray-500 hover:text-gray-700',
@@ -68,10 +68,27 @@
                             v-for="booking in bookings"
                             :key="booking.uuid || booking.id"
                             @click="viewBooking(booking)"
-                            class="rounded-xl bg-white border border-gray-200 cursor-pointer active:bg-gray-50 transition-colors"
+                            class="flex items-center gap-3 rounded-xl bg-white border border-gray-200 px-5 py-3.5 cursor-pointer active:bg-gray-50 transition-colors"
                         >
                             <div
-                                class="flex items-start justify-between gap-3 px-5 py-3.5"
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-600"
+                            >
+                                <svg
+                                    class="h-5 w-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="1.5"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
+                                    />
+                                </svg>
+                            </div>
+                            <div
+                                class="flex min-w-0 flex-1 items-start justify-between gap-3"
                             >
                                 <div class="min-w-0 flex-1">
                                     <p
@@ -115,14 +132,37 @@
                             :columns="columns"
                             :rows="bookings"
                             :loading="loading"
+                            :sort-key="sortBy"
+                            :sort-direction="sortDirection"
                             empty-message="No bookings found."
+                            @sort="sortBookings"
                             @row-click="viewBooking"
                         >
                             <template #cell-facility="{ row }">
-                                <span
-                                    class="text-sm font-medium text-gray-900"
-                                    >{{ row.facility?.name || "-" }}</span
-                                >
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-600"
+                                    >
+                                        <svg
+                                            class="h-5 w-5"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke-width="1.5"
+                                            stroke="currentColor"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
+                                            />
+                                        </svg>
+                                    </div>
+                                    <span
+                                        class="min-w-0 truncate text-sm font-medium text-gray-900"
+                                    >
+                                        {{ row.facility?.name || "-" }}
+                                    </span>
+                                </div>
                             </template>
                             <template #cell-booking_date="{ value }">
                                 <span class="text-sm text-gray-700">{{
@@ -144,21 +184,27 @@
                                         name: 'resident.bookings.show',
                                         params: { uuid: row.uuid },
                                     }"
-                                    class="inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
+                                    class="inline-flex rounded-lg p-1.5 text-gray-400 transition-colors hover:text-gray-600"
+                                    title="View details"
+                                    aria-label="View booking details"
                                     @click.stop
                                 >
-                                    View
                                     <svg
-                                        class="h-3.5 w-3.5"
+                                        class="h-4 w-4"
                                         fill="none"
                                         viewBox="0 0 24 24"
-                                        stroke-width="2"
+                                        stroke-width="1.5"
                                         stroke="currentColor"
                                     >
                                         <path
                                             stroke-linecap="round"
                                             stroke-linejoin="round"
-                                            d="m8.25 4.5 7.5 7.5-7.5 7.5"
+                                            d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.64 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.64 0-8.573-3.007-9.963-7.178Z"
+                                        />
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
                                         />
                                     </svg>
                                 </router-link>
@@ -194,9 +240,9 @@ const tabs = [
 
 const columns = [
     { key: "facility", label: "Facility" },
-    { key: "booking_date", label: "Date" },
-    { key: "time", label: "Time" },
-    { key: "status", label: "Status" },
+    { key: "booking_date", label: "Date", sortable: true },
+    { key: "time", label: "Time", sortable: true },
+    { key: "status", label: "Status", sortable: true },
     { key: "actions", label: "" },
 ];
 
@@ -204,6 +250,8 @@ const activeTab = ref("upcoming");
 const bookings = ref([]);
 const meta = ref(null);
 const loading = ref(true);
+const sortBy = ref("booking_date");
+const sortDirection = ref("desc");
 
 function formatDate(dateStr) {
     if (!dateStr) return "";
@@ -225,7 +273,9 @@ async function loadBookings(page = 1) {
         const { data } = await residentApi.getBookings({
             filter: activeTab.value,
             page,
-            per_page: 15,
+            per_page: 10,
+            sort: sortBy.value === "time" ? "start_time" : sortBy.value,
+            direction: sortDirection.value,
         });
         bookings.value = data.data.data;
         meta.value = data.data.meta;
@@ -239,6 +289,18 @@ async function loadBookings(page = 1) {
 watch(activeTab, () => {
     loadBookings(1);
 });
+
+function sortBookings(key) {
+    if (sortBy.value === key) {
+        sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
+        return;
+    }
+
+    sortBy.value = key;
+    sortDirection.value = "asc";
+}
+
+watch([sortBy, sortDirection], () => loadBookings(1));
 
 onMounted(() => {
     loadBookings();
