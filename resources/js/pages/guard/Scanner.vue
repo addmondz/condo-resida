@@ -204,6 +204,56 @@
                         >
                             {{ cameraMessage }}
                         </div>
+
+                        <div
+                            v-if="scanStatusBadge"
+                            class="absolute inset-x-4 top-4 flex justify-center"
+                        >
+                            <span
+                                class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold shadow-lg backdrop-blur"
+                                :class="scanStatusBadgeClass"
+                            >
+                                <span
+                                    v-if="scanStatusBadge === 'detecting'"
+                                    class="h-2.5 w-2.5 animate-pulse rounded-full bg-amber-400"
+                                ></span>
+                                <span
+                                    v-else-if="scanStatusBadge === 'validating'"
+                                    class="h-2.5 w-2.5 animate-spin rounded-full border-2 border-white border-t-transparent"
+                                ></span>
+                                <span
+                                    v-else-if="scanStatusBadge === 'success'"
+                                    class="h-2.5 w-2.5 rounded-full bg-emerald-400"
+                                ></span>
+                                <span
+                                    v-else
+                                    class="h-2.5 w-2.5 rounded-full bg-red-400"
+                                ></span>
+                                {{ scanStatusText }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div
+                        v-if="scanLog.length"
+                        class="mt-3 max-h-36 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 font-mono text-xs"
+                    >
+                        <div
+                            v-for="(entry, i) in scanLog"
+                            :key="i"
+                            class="flex gap-2 py-0.5"
+                            :class="{
+                                'text-emerald-700': entry.type === 'success',
+                                'text-red-600': entry.type === 'error',
+                                'text-amber-600': entry.type === 'warn',
+                                'text-gray-500': entry.type === 'info',
+                            }"
+                        >
+                            <span class="shrink-0 text-gray-400">{{
+                                entry.time
+                            }}</span>
+                            <span>{{ entry.msg }}</span>
+                        </div>
                     </div>
 
                     <div class="mt-4 grid gap-3 sm:grid-cols-2">
@@ -359,9 +409,41 @@ const scanLocked = ref(false);
 const errorMessage = ref("");
 const cameraError = ref("");
 const cameraMessage = ref("");
+const scanStatusBadge = ref("");
+const scanStatusText = ref("");
+const scanLog = ref([]);
 const toast = useToast();
 
 let qrScanner = null;
+let lastDecodedAt = 0;
+
+const scanStatusBadgeClass = computed(() => {
+    const map = {
+        detecting: "bg-amber-900/80 text-amber-100",
+        validating: "bg-blue-900/80 text-blue-100",
+        success: "bg-emerald-900/80 text-emerald-100",
+        error: "bg-red-900/80 text-red-100",
+    };
+    return map[scanStatusBadge.value] || "bg-gray-900/80 text-gray-100";
+});
+
+function addScanLog(msg, type = "info") {
+    const now = new Date();
+    const time = now.toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+    });
+    scanLog.value.unshift({ time, msg, type });
+    if (scanLog.value.length > 30) scanLog.value.pop();
+}
+
+function setScanBadge(badge, text) {
+    scanStatusBadge.value = badge;
+    scanStatusText.value = text;
+}
+
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 const scannerStatusLabel = computed(() => {
     if (validating.value) return "Validating";
@@ -450,18 +532,27 @@ async function startCamera() {
     errorMessage.value = "";
     cameraMessage.value = "Requesting camera access...";
     startingCamera.value = true;
+    addScanLog("Starting camera...", "info");
 
     try {
         await nextTick();
 
-        if (!qrScanner) {
-            qrScanner = new Html5Qrcode(scannerElementId, {
-                formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
-                verbose: false,
-            });
+        if (qrScanner) {
+            try {
+                await qrScanner.clear();
+            } catch (_) {}
+            qrScanner = null;
         }
 
+        qrScanner = new Html5Qrcode(scannerElementId, {
+            formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+            verbose: false,
+        });
+
+        addScanLog("Enumerating cameras...", "info");
         const cameras = await Html5Qrcode.getCameras();
+        addScanLog(`Found ${cameras.length} camera(s)`, "info");
+
         const cameraId = preferredCameraId(cameras);
         const cameraConfig = cameraId
             ? { deviceId: { exact: cameraId } }
@@ -470,7 +561,7 @@ async function startCamera() {
         await qrScanner.start(
             cameraConfig,
             {
-                fps: 10,
+                fps: isMobile ? 5 : 10,
                 qrbox: (viewfinderWidth, viewfinderHeight) => {
                     const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
                     const size = Math.floor(minEdge * 0.72);
@@ -485,12 +576,15 @@ async function startCamera() {
 
         isCameraActive.value = true;
         scanLocked.value = false;
+        lastDecodedAt = 0;
         cameraMessage.value = "Hold the QR code inside the frame.";
+        addScanLog("Camera active — ready to scan", "success");
     } catch (err) {
         cameraError.value = cameraErrorMessage(err);
         cameraMessage.value = "";
         isCameraActive.value = false;
         scannerMode.value = "manual";
+        addScanLog(`Camera error: ${cameraError.value}`, "error");
     } finally {
         startingCamera.value = false;
     }
@@ -516,9 +610,14 @@ async function stopCamera() {
     }
 
     try {
-        await qrScanner.stop();
+        const stopPromise = qrScanner.stop();
+        const timeout = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Camera stop timed out")), 3000),
+        );
+        await Promise.race([stopPromise, timeout]);
+        addScanLog("Camera stopped", "info");
     } catch (err) {
-        // The scanner can already be stopped by the browser when permissions change.
+        addScanLog(`Camera stop: ${err.message || "forced"}`, "warn");
     } finally {
         isCameraActive.value = false;
         cameraMessage.value = "";
@@ -528,10 +627,21 @@ async function stopCamera() {
 async function handleScanSuccess(decodedText) {
     if (scanLocked.value || !decodedText) return;
 
+    const now = Date.now();
+    if (now - lastDecodedAt < 1500) return;
+    lastDecodedAt = now;
+
     scanLocked.value = true;
     qrToken.value = decodedText.trim();
-    cameraMessage.value = "QR found. Validating pass...";
+
+    setScanBadge("detecting", "QR Code Detected");
+    addScanLog(`QR detected (${decodedText.trim().substring(0, 12)}...)`, "success");
+    cameraMessage.value = "QR found — stopping camera...";
+
     await stopCamera();
+
+    setScanBadge("validating", "Validating Pass...");
+    addScanLog("Sending to server for validation...", "info");
     await validateToken(qrToken.value, { fromCamera: true });
 }
 
@@ -552,6 +662,8 @@ async function validateToken(token, options = {}) {
     scannerResult.value = null;
     validating.value = true;
 
+    setScanBadge("validating", "Validating Pass...");
+
     try {
         const { data } = await guardApi.validateQr({
             qr_token: token.trim(),
@@ -559,6 +671,19 @@ async function validateToken(token, options = {}) {
         scannerResult.value = data.data;
         visitor.value = data.data.visitor;
         scannerMode.value = "result";
+
+        const r = data.data.result;
+        if (data.data.can_check_in) {
+            setScanBadge("success", "Valid — Ready for Check-In");
+            addScanLog(`Result: ${r} — can check in`, "success");
+        } else if (data.data.can_check_out) {
+            setScanBadge("success", "Checked In — Ready for Check-Out");
+            addScanLog(`Result: ${r} — can check out`, "success");
+        } else {
+            setScanBadge("error", formatResult(r));
+            addScanLog(`Result: ${r} — ${data.data.message}`, "warn");
+        }
+
         if (options.fromCamera) {
             toast.success("QR code scanned successfully.");
         }
@@ -573,6 +698,9 @@ async function validateToken(token, options = {}) {
             can_check_out: false,
         };
         scannerMode.value = "result";
+
+        setScanBadge("error", "Scan Failed");
+        addScanLog(`Validation failed: ${message}`, "error");
     } finally {
         validating.value = false;
         cameraMessage.value = "";
@@ -633,6 +761,10 @@ async function resetScan(options = {}) {
     cameraError.value = "";
     cameraMessage.value = "";
     scanLocked.value = false;
+    scanStatusBadge.value = "";
+    scanStatusText.value = "";
+    scanLog.value = [];
+    lastDecodedAt = 0;
     scannerMode.value = options.mode || "manual";
 }
 
@@ -672,9 +804,8 @@ onBeforeUnmount(async () => {
     if (qrScanner) {
         try {
             await qrScanner.clear();
-        } catch (err) {
-            // Clear can fail if the scanner was never fully mounted.
-        }
+        } catch (_) {}
+        qrScanner = null;
     }
 });
 </script>

@@ -8,6 +8,7 @@ use App\Http\Resources\VisitorRegistrationResource;
 use App\Services\VisitorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class QrController extends Controller
 {
@@ -26,7 +27,23 @@ class QrController extends Controller
             'qr_token' => ['required', 'string'],
         ]);
 
-        $result = $this->visitorService->scanQrToken($request->input('qr_token'), $request->user());
+        $token = $request->input('qr_token');
+
+        Log::info('[QR Scan] Guard #{guard} scanned token (length={len}), server_now={now}, server_today={today}', [
+            'guard' => $request->user()->id,
+            'len' => strlen($token),
+            'now' => now()->toDateTimeString(),
+            'today' => today()->toDateString(),
+        ]);
+
+        $result = $this->visitorService->scanQrToken($token, $request->user());
+
+        Log::info('[QR Scan] Result: {result}, can_check_in={ci}, can_check_out={co}, visitor_date={vd}', [
+            'result' => $result['result'],
+            'ci' => $result['can_check_in'] ? 'yes' : 'no',
+            'co' => $result['can_check_out'] ? 'yes' : 'no',
+            'vd' => $result['visitor']?->visit_date?->toDateString() ?? 'n/a',
+        ]);
 
         return $this->success([
             'result' => $result['result'],
