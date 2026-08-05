@@ -139,8 +139,7 @@
             <div class="space-y-3">
                 <AppButton
                     v-if="visitor.status === 'Active'"
-                    @click="handleCheckIn"
-                    :loading="checkingIn"
+                    @click="showCheckInDialog = true"
                     class="w-full"
                     size="lg"
                 >
@@ -148,8 +147,7 @@
                 </AppButton>
                 <AppButton
                     v-if="visitor.status === 'Checked In'"
-                    @click="handleCheckOut"
-                    :loading="checkingOut"
+                    @click="showCheckOutDialog = true"
                     variant="secondary"
                     class="w-full"
                     size="lg"
@@ -184,6 +182,28 @@
                 </div>
             </div>
         </template>
+
+        <ConfirmationDialog
+            :show="showCheckInDialog"
+            title="Check In Visitor"
+            :message="`Confirm check-in for ${visitor.visitor_name || 'this visitor'}? This will record their entry.`"
+            confirm-label="Check In"
+            confirm-variant="success"
+            :loading="checkingIn"
+            @confirm="handleCheckIn"
+            @cancel="showCheckInDialog = false"
+        />
+
+        <ConfirmationDialog
+            :show="showCheckOutDialog"
+            title="Check Out Visitor"
+            :message="`Confirm check-out for ${visitor.visitor_name || 'this visitor'}? This will record their departure.`"
+            confirm-label="Check Out"
+            confirm-variant="primary"
+            :loading="checkingOut"
+            @confirm="handleCheckOut"
+            @cancel="showCheckOutDialog = false"
+        />
     </div>
 </template>
 
@@ -191,6 +211,7 @@
 import { ref, onMounted } from "vue";
 import guardApi from "@/api/guard";
 import AppButton from "@/components/common/AppButton.vue";
+import ConfirmationDialog from "@/components/common/ConfirmationDialog.vue";
 import PageHeader from "@/components/common/PageHeader.vue";
 import SkeletonLoader from "@/components/common/SkeletonLoader.vue";
 import { useToast } from "@/composables/useToast";
@@ -204,6 +225,8 @@ const loading = ref(true);
 const error = ref("");
 const checkingIn = ref(false);
 const checkingOut = ref(false);
+const showCheckInDialog = ref(false);
+const showCheckOutDialog = ref(false);
 const toast = useToast();
 
 function formatDateTime(dateStr) {
@@ -227,6 +250,7 @@ async function handleCheckIn() {
         toast.error(err.response?.data?.message || "Failed to check in.");
     } finally {
         checkingIn.value = false;
+        showCheckInDialog.value = false;
     }
 }
 
@@ -240,6 +264,7 @@ async function handleCheckOut() {
         toast.error(err.response?.data?.message || "Failed to check out.");
     } finally {
         checkingOut.value = false;
+        showCheckOutDialog.value = false;
     }
 }
 

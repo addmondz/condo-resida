@@ -108,10 +108,10 @@
         </aside>
 
         <!-- Main Area -->
-        <div class="flex flex-1 flex-col overflow-hidden">
+        <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
             <!-- Top Bar -->
             <header
-                class="flex h-16 shrink-0 items-center gap-3 border-b border-gray-200 bg-white px-4 sm:px-6"
+                class="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-gray-200 bg-white/95 px-4 shadow-sm shadow-gray-900/[0.03] backdrop-blur-md sm:px-6"
             >
                 <!-- Hamburger -->
                 <button
@@ -207,8 +207,8 @@
             </header>
 
             <!-- Content -->
-            <main class="flex-1 overflow-y-auto">
-                <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            <main class="min-w-0 flex-1 overflow-y-auto">
+                <div class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
                     <router-view v-slot="{ Component }">
                         <Transition name="page-fade" mode="out-in" appear>
                             <component :is="Component" />

@@ -126,7 +126,7 @@
             </div>
         </aside>
 
-        <div class="flex flex-1 flex-col overflow-hidden">
+        <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
             <header
                 class="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-gray-200 bg-white/80 px-4 backdrop-blur-md sm:px-6"
             >
@@ -225,9 +225,9 @@
                 </div>
             </header>
 
-            <main class="flex-1 overflow-y-auto">
+            <main class="min-w-0 flex-1 overflow-y-auto">
                 <div
-                    class="mx-auto max-w-7xl px-4 py-6 pb-16 sm:px-6 lg:px-8 lg:pb-0"
+                    class="mx-auto w-full max-w-7xl px-4 py-6 pb-16 sm:px-6 lg:px-8 lg:pb-0"
                 >
                     <router-view v-slot="{ Component }">
                         <Transition name="page-fade" mode="out-in" appear>

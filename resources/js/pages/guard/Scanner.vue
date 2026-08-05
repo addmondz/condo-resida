@@ -18,11 +18,12 @@
                             <h2 class="text-base font-semibold text-gray-900">
                                 {{ panelTitle }}
                             </h2>
-                            <p class="mt-0.5 text-sm text-gray-500">
+                            <p v-if="panelSubtitle" class="mt-0.5 text-sm text-gray-500">
                                 {{ panelSubtitle }}
                             </p>
                         </div>
                         <span
+                            v-if="scannerMode !== 'result'"
                             class="inline-flex w-fit items-center gap-2 rounded-full px-3 py-1 text-xs font-medium"
                             :class="scannerStatusClass"
                         >
@@ -285,104 +286,212 @@
                     </p>
                 </div>
 
-                <div v-else-if="scannerResult" class="px-5 py-5">
-                    <div
-                        class="overflow-hidden rounded-xl border"
-                        :class="resultPanelClass"
-                    >
-                    <div
-                        :class="[
-                            'px-5 py-4 text-sm font-semibold text-white',
-                            scannerResult.can_check_in
-                                ? 'bg-emerald-600'
-                                : scannerResult.can_check_out
-                                  ? 'bg-blue-600'
-                                  : scannerResult.visitor
-                                    ? 'bg-gray-700'
-                                    : 'bg-red-600',
-                        ]"
-                    >
-                        {{ formatResult(scannerResult.result) }}
+                <div v-else-if="scannerResult" class="px-5 py-6">
+                    <div class="flex flex-col items-center">
+                        <div
+                            class="flex h-12 w-12 items-center justify-center rounded-full"
+                            :class="resultIconBg"
+                        >
+                            <svg
+                                v-if="resultIconType === 'check'"
+                                class="h-6 w-6 text-white"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke-width="2.5"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M4.5 12.75l6 6 9-13.5"
+                                />
+                            </svg>
+                            <svg
+                                v-else-if="resultIconType === 'warning'"
+                                class="h-6 w-6 text-white"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke-width="2"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
+                                />
+                            </svg>
+                            <svg
+                                v-else
+                                class="h-6 w-6 text-white"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke-width="2.5"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M6 18L18 6M6 6l12 12"
+                                />
+                            </svg>
+                        </div>
+                        <p
+                            class="mt-3 text-sm font-semibold"
+                            :class="resultLabelColor"
+                        >
+                            {{ resultStatusLabel }}
+                        </p>
                     </div>
 
-                    <div class="px-5 py-5">
-                        <p
-                            class="text-sm leading-6"
-                            :class="
-                                scannerResult.visitor
-                                    ? 'text-gray-700'
-                                    : 'text-red-700'
-                            "
-                        >
-                            {{ scannerResult.message }}
-                        </p>
+                    <template v-if="visitor">
+                        <div class="mt-4 text-center">
+                            <h3
+                                class="text-xl font-bold text-gray-900"
+                            >
+                                {{ visitor.visitor_name }}
+                            </h3>
+                            <p class="mt-0.5 text-sm text-gray-500">
+                                {{ formatResult(visitor.purpose) }}
+                            </p>
+                        </div>
 
-                        <dl
-                            v-if="visitor"
-                            class="mt-5 divide-y divide-gray-100"
+                        <div class="mt-5 rounded-lg bg-gray-50 px-4 py-3">
+                            <p
+                                class="text-[11px] font-semibold uppercase tracking-wider text-gray-400"
+                            >
+                                Destination
+                            </p>
+                            <p
+                                class="mt-1 text-sm font-semibold text-gray-900"
+                            >
+                                {{ visitor.property_name }}
+                            </p>
+                            <p
+                                v-if="unitLabel"
+                                class="text-sm text-gray-600"
+                            >
+                                {{ unitLabel }}
+                            </p>
+                        </div>
+
+                        <div
+                            class="mt-4 grid grid-cols-2 gap-x-4 gap-y-3"
                         >
                             <div
-                                v-for="item in visitorDetails"
+                                v-for="item in compactDetails"
                                 :key="item.label"
-                                class="grid grid-cols-[110px_minmax(0,1fr)] gap-3 py-3"
                             >
-                                <dt class="text-sm text-gray-500">
-                                    {{ item.label }}
-                                </dt>
-                                <dd
-                                    class="min-w-0 text-right text-sm font-medium text-gray-900"
-                                    :class="item.mono ? 'font-mono' : ''"
+                                <p
+                                    class="text-[11px] font-semibold uppercase tracking-wider text-gray-400"
                                 >
-                                    {{ item.value || "-" }}
-                                </dd>
+                                    {{ item.label }}
+                                </p>
+                                <p
+                                    class="mt-0.5 text-sm"
+                                    :class="
+                                        item.mono
+                                            ? 'font-mono text-gray-500'
+                                            : 'font-medium text-gray-900'
+                                    "
+                                >
+                                    {{ item.value }}
+                                </p>
                             </div>
-                        </dl>
+                        </div>
 
-                        <div class="mt-6 space-y-3">
+                        <div
+                            v-if="timestampDisplay"
+                            class="mt-4 flex items-center justify-center gap-1.5 rounded-lg border border-gray-100 py-2 text-sm text-gray-500"
+                        >
+                            <svg
+                                class="h-3.5 w-3.5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke-width="1.5"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                                />
+                            </svg>
+                            {{ timestampDisplay }}
+                        </div>
+
+                        <div class="mt-5">
                             <AppButton
                                 v-if="scannerResult.can_check_in"
-                                @click="handleCheckIn"
+                                @click="showCheckInDialog = true"
                                 :loading="checkingIn"
+                                size="xl"
                                 class="w-full"
                             >
                                 Check In Visitor
                             </AppButton>
                             <AppButton
                                 v-if="scannerResult.can_check_out"
-                                @click="handleCheckOut"
+                                @click="showCheckOutDialog = true"
                                 :loading="checkingOut"
-                                variant="secondary"
+                                size="xl"
                                 class="w-full"
                             >
                                 Check Out Visitor
                             </AppButton>
                         </div>
-                    </div>
-                    </div>
+                    </template>
 
-                    <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                        <AppButton
+                    <p
+                        v-else
+                        class="mt-3 text-center text-sm text-red-600"
+                    >
+                        {{ scannerResult.message }}
+                    </p>
+
+                    <div
+                        class="mt-6 grid grid-cols-2 gap-3"
+                    >
+                        <button
                             type="button"
-                            size="xl"
-                            class="w-full"
-                            :loading="startingCamera"
+                            class="cursor-pointer rounded-[10px] border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+                            :disabled="startingCamera"
                             @click="startCamera"
                         >
-                            Scan Another QR
-                        </AppButton>
-                        <AppButton
+                            Scan Another
+                        </button>
+                        <button
                             type="button"
-                            size="xl"
-                            variant="secondary"
-                            class="w-full"
+                            class="cursor-pointer rounded-[10px] border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50 active:scale-[0.98]"
                             @click="resetScan"
                         >
                             Enter Manually
-                        </AppButton>
+                        </button>
                     </div>
                 </div>
             </section>
         </div>
+
+        <ConfirmationDialog
+            :show="showCheckInDialog"
+            title="Check In Visitor"
+            :message="`Confirm check-in for ${visitor?.visitor_name || 'this visitor'}? This will record their entry.`"
+            confirm-label="Check In"
+            confirm-variant="success"
+            :loading="checkingIn"
+            @confirm="handleCheckIn"
+            @cancel="showCheckInDialog = false"
+        />
+
+        <ConfirmationDialog
+            :show="showCheckOutDialog"
+            title="Check Out Visitor"
+            :message="`Confirm check-out for ${visitor?.visitor_name || 'this visitor'}? This will record their departure.`"
+            confirm-label="Check Out"
+            confirm-variant="primary"
+            :loading="checkingOut"
+            @confirm="handleCheckOut"
+            @cancel="showCheckOutDialog = false"
+        />
     </div>
 </template>
 
@@ -393,6 +502,7 @@ import guardApi from "@/api/guard";
 import PageHeader from "@/components/common/PageHeader.vue";
 import AppInput from "@/components/common/AppInput.vue";
 import AppButton from "@/components/common/AppButton.vue";
+import ConfirmationDialog from "@/components/common/ConfirmationDialog.vue";
 import { useToast } from "@/composables/useToast";
 
 const scannerElementId = "guard-qr-reader";
@@ -403,6 +513,8 @@ const scannerMode = ref("manual");
 const validating = ref(false);
 const checkingIn = ref(false);
 const checkingOut = ref(false);
+const showCheckInDialog = ref(false);
+const showCheckOutDialog = ref(false);
 const startingCamera = ref(false);
 const isCameraActive = ref(false);
 const scanLocked = ref(false);
@@ -468,7 +580,7 @@ const scannerDotClass = computed(() => {
 
 const panelTitle = computed(() => {
     if (scannerMode.value === "camera") return "Scan QR Code";
-    if (scannerMode.value === "result") return resultTitle.value;
+    if (scannerMode.value === "result") return "Scan Result";
     return "Manual Entry";
 });
 
@@ -476,46 +588,91 @@ const panelSubtitle = computed(() => {
     if (scannerMode.value === "camera") {
         return "Center the visitor QR code in the camera frame.";
     }
-
-    if (scannerMode.value === "result") {
-        return scannerResult.value?.message || "Review the scan result.";
-    }
-
+    if (scannerMode.value === "result") return "";
     return "Enter the QR token, or switch to camera scanning.";
 });
 
-const resultTitle = computed(() => {
-    if (!scannerResult.value) return "Scanner Result";
-    if (scannerResult.value.can_check_in) return "Valid visitor pass";
-    if (scannerResult.value.can_check_out) return "Visitor already checked in";
-    if (scannerResult.value.visitor) return "Pass cannot be used";
-    return "QR code not found";
+const resultIconType = computed(() => {
+    if (!scannerResult.value) return "error";
+    if (scannerResult.value.can_check_in) return "check";
+    if (scannerResult.value.can_check_out) return "check";
+    const r = scannerResult.value.result;
+    if (r === "already_checked_out") return "check";
+    if (["expired", "not_valid_for_today"].includes(r)) return "warning";
+    return "error";
 });
 
-const resultPanelClass = computed(() => {
-    if (!scannerResult.value?.visitor) return "border-red-200 bg-red-50";
-    if (scannerResult.value.can_check_in) return "border-emerald-200 bg-white";
-    if (scannerResult.value.can_check_out) return "border-blue-200 bg-white";
-    return "border-gray-200 bg-white";
+const resultIconBg = computed(() => {
+    if (!scannerResult.value) return "bg-red-500";
+    if (scannerResult.value.can_check_in) return "bg-emerald-500";
+    if (scannerResult.value.can_check_out) return "bg-blue-500";
+    const r = scannerResult.value.result;
+    if (r === "already_checked_out") return "bg-gray-400";
+    if (["expired", "not_valid_for_today"].includes(r)) return "bg-amber-500";
+    return "bg-red-500";
 });
 
-const visitorDetails = computed(() => {
+const resultLabelColor = computed(() => {
+    if (!scannerResult.value) return "text-red-600";
+    if (scannerResult.value.can_check_in) return "text-emerald-600";
+    if (scannerResult.value.can_check_out) return "text-blue-600";
+    const r = scannerResult.value.result;
+    if (r === "already_checked_out") return "text-gray-500";
+    if (["expired", "not_valid_for_today"].includes(r)) return "text-amber-600";
+    return "text-red-600";
+});
+
+const resultStatusLabel = computed(() => {
+    if (!scannerResult.value) return "Error";
+    if (scannerResult.value.can_check_in) return "Ready to Check In";
+    if (scannerResult.value.can_check_out) return "Checked In";
+    const r = scannerResult.value.result;
+    const labels = {
+        already_checked_out: "Checked Out",
+        expired: "Pass Expired",
+        cancelled: "Pass Cancelled",
+        not_valid_for_today: "Not Valid Today",
+        suspended_resident: "Resident Suspended",
+        invalid_qr: "Invalid QR Code",
+    };
+    return labels[r] || "Invalid";
+});
+
+const compactDetails = computed(() => {
     if (!visitor.value) return [];
-
     return [
-        { label: "Visitor", value: visitor.value.visitor_name },
         { label: "Contact", value: visitor.value.contact_number },
         { label: "Vehicle", value: visitor.value.vehicle_number },
-        { label: "Purpose", value: formatResult(visitor.value.purpose) },
-        { label: "Visit Date", value: visitor.value.visit_date },
-        { label: "Property", value: visitor.value.property_name },
-        { label: "Unit", value: unitLabel.value },
+        { label: "Visit Date", value: formattedVisitDate.value },
         {
             label: "Reference",
             value: visitor.value.reference_number,
             mono: true,
         },
     ].filter((item) => item.value);
+});
+
+const formattedVisitDate = computed(() => {
+    if (!visitor.value?.visit_date) return "";
+    const today = new Date().toISOString().slice(0, 10);
+    if (visitor.value.visit_date === today) return "Today";
+    const d = new Date(visitor.value.visit_date + "T00:00:00");
+    return d.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+    });
+});
+
+const timestampDisplay = computed(() => {
+    if (!visitor.value) return "";
+    if (visitor.value.checked_out_at) {
+        return `Checked out at ${formatTime(visitor.value.checked_out_at)}`;
+    }
+    if (visitor.value.checked_in_at) {
+        return `Checked in at ${formatTime(visitor.value.checked_in_at)}`;
+    }
+    return "";
 });
 
 const unitLabel = computed(() => {
@@ -726,6 +883,7 @@ async function handleCheckIn() {
             err.response?.data?.message || "Failed to check in visitor.";
     } finally {
         checkingIn.value = false;
+        showCheckInDialog.value = false;
     }
 }
 
@@ -749,6 +907,7 @@ async function handleCheckOut() {
             err.response?.data?.message || "Failed to check out visitor.";
     } finally {
         checkingOut.value = false;
+        showCheckOutDialog.value = false;
     }
 }
 
@@ -797,6 +956,16 @@ function formatResult(result) {
     return result
         .replace(/_/g, " ")
         .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatTime(timestamp) {
+    if (!timestamp) return "";
+    const d = new Date(timestamp);
+    return d.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+    });
 }
 
 onBeforeUnmount(async () => {

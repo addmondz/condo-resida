@@ -54,13 +54,13 @@ const variantClasses = {
     primary:
         "bg-primary-600 text-white hover:bg-primary-700 focus-visible:ring-primary-500 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),0_1px_3px_0_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)] active:scale-[0.98] active:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05),0_1px_2px_0_rgba(0,0,0,0.05)]",
     secondary:
-        "bg-primary-600 text-white hover:bg-primary-700 focus-visible:ring-primary-500 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),0_1px_3px_0_rgba(0,0,0,0.1)] active:scale-[0.98]",
+        "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 focus-visible:ring-gray-400 shadow-sm active:scale-[0.98]",
     danger:
-        "bg-primary-600 text-white hover:bg-primary-700 focus-visible:ring-primary-500 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),0_1px_3px_0_rgba(0,0,0,0.1)] active:scale-[0.98]",
+        "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),0_1px_3px_0_rgba(0,0,0,0.1)] active:scale-[0.98]",
     success:
-        "bg-primary-600 text-white hover:bg-primary-700 focus-visible:ring-primary-500 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),0_1px_3px_0_rgba(0,0,0,0.1)] active:scale-[0.98]",
+        "bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-500 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),0_1px_3px_0_rgba(0,0,0,0.1)] active:scale-[0.98]",
     ghost:
-        "bg-primary-600 text-white hover:bg-primary-700 focus-visible:ring-primary-500 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),0_1px_3px_0_rgba(0,0,0,0.1)] active:scale-[0.98]",
+        "bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus-visible:ring-gray-400 active:scale-[0.98]",
 };
 
 const sizeClasses = {

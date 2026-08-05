@@ -3,7 +3,7 @@
         <!-- Breadcrumb -->
         <nav
             v-if="breadcrumbs.length"
-            class="mb-2 flex items-center gap-1.5 text-sm text-gray-500"
+            class="mb-2 flex min-w-0 flex-wrap items-center gap-1.5 text-sm text-gray-500"
         >
             <router-link
                 :to="{ name: homeRouteName }"
@@ -36,9 +36,9 @@
             </template>
         </nav>
         <div
-            class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
         >
-            <div>
+            <div class="min-w-0">
                 <h1 class="text-xl font-bold text-gray-900 sm:text-2xl">
                     {{ title }}
                 </h1>
@@ -46,7 +46,10 @@
                     {{ subtitle }}
                 </p>
             </div>
-            <div v-if="$slots.actions" class="flex items-center gap-2">
+            <div
+                v-if="$slots.actions"
+                class="flex flex-wrap items-center gap-2"
+            >
                 <slot name="actions" />
             </div>
         </div>

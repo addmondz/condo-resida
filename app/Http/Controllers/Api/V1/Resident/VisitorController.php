@@ -122,9 +122,9 @@ class VisitorController extends Controller
     {
         $this->authorize('view', $visitor);
 
-        if ($visitor->status !== VisitorStatus::Active || ! $visitor->encrypted_qr_token) {
+        if (! $visitor->encrypted_qr_token) {
             return $this->error('This visitor QR code is no longer available.', 422, [
-                'visitor' => ['Only active visitor passes can display a QR code.'],
+                'visitor' => ['This visitor pass does not have a QR token.'],
             ]);
         }
 
